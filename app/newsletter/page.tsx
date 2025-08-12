@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Header } from "@/components/Header"
 import { issueApi, subscriberApi, statsApi, settingsApi, automationApi, type Issue, type Subscriber, type SubscriberSummary, type NewsletterStats } from "@/lib/newsletter-api"
 // Sidebar is provided globally by the layout
 
@@ -293,22 +294,21 @@ export default function NewsletterAdminPage() {
   return (
     <>
       <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-[#5e6461]">Newsletter</h2>
-              <p className="text-[#5e6461]/70">Manage issues, subscribers, and settings</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href={`/newsletter/create`}>
-                <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New Issue
-                </Button>
-              </Link>
-            </div>
+        <Header 
+          title="Newsletter" 
+          subtitle="Manage issues, subscribers, and settings"
+        />
+        
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-end gap-4">
+            <Link href={`/newsletter/create`}>
+              <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Issue
+              </Button>
+            </Link>
           </div>
-        </header>
+        </div>
 
         <main className="flex-1 p-6">
           {/* Analytics */}

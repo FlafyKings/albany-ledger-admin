@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import {
-  Bell,
   Calendar,
   FileText,
   Home,
@@ -16,12 +15,10 @@ import {
   Vote,
   Shield,
   Plus,
-  Search,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
-  ChevronDown,
   Phone,
   Clock,
   Star,
@@ -53,14 +50,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -68,6 +57,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Header } from "@/components/Header"
 
 // Import content API functions
 import { 
@@ -497,50 +493,11 @@ export default function ContentManagement() {
     <>
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-[#5e6461]">Content Management</h2>
-              <p className="text-[#5e6461]/70">Manage emergency contacts, breaking news, and articles</p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
-                <Input
-                  placeholder="Search content..."
-                  className="pl-10 w-64 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
-                />
-              </div>
-
-              <Button variant="outline" size="icon" className="relative bg-transparent">
-                <Bell className="h-4 w-4" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-[#d36530] text-white text-xs">
-                  3
-                </Badge>
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-                    <div className="w-8 h-8 bg-[#d36530] rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      A
-                    </div>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                  <DropdownMenuItem>System Logs</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Sign Out</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </header>
+        <Header 
+          title="Content Management" 
+          subtitle="Manage emergency contacts, breaking news, and articles"
+          searchPlaceholder="Search content..."
+        />
 
         {/* Content */}
         <main className="flex-1 p-6">
