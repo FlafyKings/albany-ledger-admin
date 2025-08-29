@@ -249,20 +249,58 @@ let officialsData: Official[] = [
   },
 ]
 
+// Import API client
+import { officialsApi, transformApiOfficial, transformForApi } from '@/lib/officials-api'
+
 function nextId() {
   return Math.max(0, ...officialsData.map((o) => o.id)) + 1
 }
 
-export function getOfficials() {
+// Check if we should use API or fallback to mock data
+const USE_API = process.env.NEXT_PUBLIC_USE_OFFICIALS_API === 'true'
+
+export async function getOfficials() {
+  if (USE_API) {
+    try {
+      const result = await officialsApi.list()
+      if (result.success && result.data) {
+        return result.data.officials.map(transformApiOfficial)
+      }
+    } catch (error) {
+      console.warn('API call failed, falling back to mock data:', error)
+    }
+  }
   return officialsData
 }
 
-export function getOfficialById(id: number) {
+export async function getOfficialById(id: number) {
+  if (USE_API) {
+    try {
+      const result = await officialsApi.get(id)
+      if (result.success && result.data) {
+        return transformApiOfficial(result.data)
+      }
+    } catch (error) {
+      console.warn('API call failed, falling back to mock data:', error)
+    }
+  }
   return officialsData.find((o) => o.id === id)
 }
 
 // Non-persistent in-memory updates for demo purposes.
-export function upsertOfficial(official: Official) {
+export async function upsertOfficial(official: Official) {
+  if (USE_API) {
+    try {
+      const apiData = transformForApi(official)
+      const result = await officialsApi.update(official.id, apiData)
+      if (result.success && result.data) {
+        return transformApiOfficial(result.data)
+      }
+    } catch (error) {
+      console.warn('API call failed, falling back to mock data:', error)
+    }
+  }
+  
   const idx = officialsData.findIndex((o) => o.id === official.id)
   if (idx >= 0) {
     officialsData[idx] = official
@@ -272,13 +310,36 @@ export function upsertOfficial(official: Official) {
   return official
 }
 
-export function createOfficial(partial: Omit<Official, "id">) {
+export async function createOfficial(partial: Omit<Official, "id">) {
+  if (USE_API) {
+    try {
+      const apiData = transformForApi(partial)
+      const result = await officialsApi.create(apiData)
+      if (result.success && result.data) {
+        return transformApiOfficial(result.data)
+      }
+    } catch (error) {
+      console.warn('API call failed, falling back to mock data:', error)
+    }
+  }
+  
   const official: Official = { ...partial, id: nextId() }
   officialsData.push(official)
   return official
 }
 
-export function deleteOfficial(id: number) {
+export async function deleteOfficial(id: number) {
+  if (USE_API) {
+    try {
+      const result = await officialsApi.delete(id)
+      if (result.success) {
+        return true
+      }
+    } catch (error) {
+      console.warn('API call failed, falling back to mock data:', error)
+    }
+  }
+  
   const before = officialsData.length
   officialsData = officialsData.filter((o) => o.id !== id)
   return officialsData.length < before

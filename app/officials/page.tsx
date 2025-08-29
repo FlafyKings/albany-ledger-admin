@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Calendar, FileText, Home, MessageSquare, Settings, Users, AlertTriangle, Mail, BarChart3, MapPin, VoteIcon, Shield, Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Building } from 'lucide-react'
 
 import { Badge } from "@/components/ui/badge"
@@ -19,13 +19,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Header } from "@/components/Header"
+import { useToast } from "@/hooks/use-toast"
 
-import { deleteOfficial, getOfficials } from "@/data/officials"
+import { deleteOfficial, getOfficials, type Official } from "@/data/officials"
 
 // Sidebar is now provided by the app layout
 
 export default function OfficialsIndexPage() {
+  const { toast } = useToast()
   const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [list, setList] = useState<Official[]>([])
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     onConfirm: () => void
@@ -33,7 +37,38 @@ export default function OfficialsIndexPage() {
     open: false,
     onConfirm: () => {},
   })
-  const [list, setList] = useState(getOfficials())
+
+  // Load officials data
+  useEffect(() => {
+    const loadOfficials = async () => {
+      setLoading(true)
+      try {
+        const officials = await getOfficials()
+        setList(officials)
+      } catch (error) {
+        console.error('Failed to load officials:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load officials. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadOfficials()
+  }, [toast])
+
+  // Refresh list after operations
+  const refreshList = async () => {
+    try {
+      const officials = await getOfficials()
+      setList(officials)
+    } catch (error) {
+      console.error('Failed to refresh officials:', error)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -51,10 +86,29 @@ export default function OfficialsIndexPage() {
   const handleDelete = (id: number) => {
     setConfirmDialog({
       open: true,
-      onConfirm: () => {
-        const removed = deleteOfficial(id)
-        if (removed) {
-          setList(getOfficials())
+      onConfirm: async () => {
+        try {
+          const removed = await deleteOfficial(id)
+          if (removed) {
+            await refreshList()
+            toast({
+              title: "Success",
+              description: "Official deleted successfully.",
+            })
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to delete official.",
+              variant: "destructive"
+            })
+          }
+        } catch (error) {
+          console.error('Failed to delete official:', error)
+          toast({
+            title: "Error",
+            description: "Failed to delete official. Please try again.",
+            variant: "destructive"
+          })
         }
       }
     })
@@ -110,79 +164,89 @@ export default function OfficialsIndexPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((o) => (
-                      <TableRow key={o.id}>
-                        <TableCell className="min-w-[220px]">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={o.image || "/placeholder.svg"}
-                              alt={o.name}
-                              className="w-9 h-9 rounded-full object-cover"
-                            />
-                            <div>
-                              <div className="font-medium text-[#5e6461]">{o.name}</div>
-                              <div className="text-xs text-[#5e6461]/70">ID: {o.id}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{o.roleTitle}</TableCell>
-                        <TableCell>
-                          {new Date(o.termStart).getFullYear()}–{new Date(o.termEnd).getFullYear()}
-                        </TableCell>
-                        <TableCell className="min-w-[220px]">
-                          <div className="text-sm text-[#5e6461]/80">{o.contact.email}</div>
-                          <div className="text-xs text-[#5e6461]/60">{o.contact.phone}</div>
-                        </TableCell>
-                        <TableCell className="min-w-[220px]">
-                          <div className="text-sm text-[#5e6461]/80">
-                            {o.contact.office.addressLine1}
-                            {o.contact.office.addressLine2 ? `, ${o.contact.office.addressLine2}` : ""}
-                          </div>
-                          <div className="text-xs text-[#5e6461]/60">
-                            {o.contact.office.city}, {o.contact.office.state} {o.contact.office.zip}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-white">
-                            {o.committees.length} membership{o.committees.length === 1 ? "" : "s"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/officials/${o.id}`}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Profile
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/officials/${o.id}/edit`}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleDelete(o.id)} className="text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Remove
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filtered.length === 0 && (
+                    {loading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-[#5e6461]/60">
-                          No officials match “{query}”.
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#d36530]"></div>
+                            <span className="ml-2 text-[#5e6461]">Loading officials...</span>
+                          </div>
                         </TableCell>
                       </TableRow>
+                    ) : filtered.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-[#5e6461]/60">
+                          {query ? 'No officials found matching your search.' : 'No officials found.'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filtered.map((o) => (
+                        <TableRow key={o.id}>
+                          <TableCell className="min-w-[220px]">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={o.image || "/placeholder.svg"}
+                                alt={o.name}
+                                className="w-9 h-9 rounded-full object-cover"
+                              />
+                              <div>
+                                <div className="font-medium text-[#5e6461]">{o.name}</div>
+                                <div className="text-xs text-[#5e6461]/70">ID: {o.id}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{o.roleTitle}</TableCell>
+                          <TableCell>
+                            {new Date(o.termStart).getFullYear()}–{new Date(o.termEnd).getFullYear()}
+                          </TableCell>
+                          <TableCell className="min-w-[220px]">
+                            <div className="text-sm text-[#5e6461]/80">{o.contact.email}</div>
+                            <div className="text-xs text-[#5e6461]/60">{o.contact.phone}</div>
+                          </TableCell>
+                          <TableCell className="min-w-[220px]">
+                            <div className="text-sm text-[#5e6461]/80">
+                              {o.contact.office.addressLine1}
+                              {o.contact.office.addressLine2 ? `, ${o.contact.office.addressLine2}` : ""}
+                            </div>
+                            <div className="text-xs text-[#5e6461]/60">
+                              {o.contact.office.city}, {o.contact.office.state} {o.contact.office.zip}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-white">
+                              {o.committees.length} membership{o.committees.length === 1 ? "" : "s"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/officials/${o.id}`}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Profile
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/officials/${o.id}/edit`}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleDelete(o.id)} className="text-red-600">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
