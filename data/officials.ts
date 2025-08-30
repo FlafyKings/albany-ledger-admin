@@ -65,282 +65,108 @@ export type Official = {
   image?: string
 }
 
-export const committeesCatalog: CommitteeCatalogItem[] = [
-  { id: 1, name: "Budget Committee", description: "Oversees city budget and financial planning" },
-  { id: 2, name: "Public Safety Committee", description: "Police and fire department oversight" },
-  { id: 3, name: "Infrastructure Committee", description: "Roads, utilities, and public works" },
-  { id: 4, name: "Parks & Recreation Committee", description: "Parks, recreation facilities, and programs" },
-]
-
-let officialsData: Official[] = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    roleTitle: "Mayor",
-    termStart: "2022-01-01",
-    termEnd: "2025-12-31",
-    contact: {
-      email: "s.johnson@albany.gov",
-      phone: "(518) 555-0123",
-      office: {
-        addressLine1: "24 Eagle Street",
-        addressLine2: "City Hall, Room 201",
-        city: "Albany",
-        state: "NY",
-        zip: "12207",
-        room: "201",
-        hours: "Mon–Fri, 9:00 AM – 5:00 PM",
-      },
-    },
-    biography:
-      "Sarah Johnson has dedicated her career to public service, focusing on economic development, sustainability, and public safety.",
-    experience: [
-      {
-        id: "exp-1",
-        title: "Mayor",
-        organization: "City of Albany",
-        startDate: "2022-01-01",
-        description: "Leading the strategic direction of the city with a focus on growth and equity.",
-      },
-      {
-        id: "exp-2",
-        title: "City Council Member",
-        organization: "City of Albany",
-        startDate: "2018-01-01",
-        endDate: "2021-12-31",
-        description: "Chaired the Budget Committee and co-authored public safety reform.",
-      },
-    ],
-    committees: [
-      { id: "m-1", committeeId: 1, name: "Budget Committee", role: "Chair" },
-      { id: "m-2", committeeId: 2, name: "Public Safety Committee", role: "Member" },
-    ],
-    votingHistory: [
-      {
-        id: "v-1",
-        issue: "2024 Budget Approval",
-        vote: "Yes",
-        result: "Passed",
-        date: "2024-03-15",
-        description: "Annual city budget for fiscal year 2024",
-      },
-      {
-        id: "v-2",
-        issue: "Downtown Parking Ordinance",
-        vote: "No",
-        result: "Failed",
-        date: "2024-03-10",
-        description: "Proposed changes to downtown parking regulations",
-      },
-    ],
-    achievements: [
-      {
-        id: "a-1",
-        title: "Led Downtown Revitalization Project",
-        description:
-          "Coordinated a $2.5M improvement initiative resulting in 15 new businesses and 200 jobs.",
-        period: "Jan 2023 – Dec 2023",
-      },
-      {
-        id: "a-2",
-        title: "Implemented Green Energy Initiative",
-        description: "Launched city-wide solar program reducing municipal energy costs by 30%.",
-        period: "Mar 2022 – Ongoing",
-      },
-    ],
-    image: "/placeholder.svg?height=64&width=64",
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    roleTitle: "City Council Member",
-    termStart: "2023-01-01",
-    termEnd: "2026-12-31",
-    contact: {
-      email: "m.chen@albany.gov",
-      phone: "(518) 555-0124",
-      office: {
-        addressLine1: "24 Eagle Street",
-        addressLine2: "City Hall, Room 110",
-        city: "Albany",
-        state: "NY",
-        zip: "12207",
-        room: "110",
-        hours: "Mon–Thu, 10:00 AM – 4:00 PM",
-      },
-    },
-    biography:
-      "Michael advocates for small business growth and community-centered infrastructure improvements.",
-    experience: [
-      {
-        id: "exp-3",
-        title: "City Council Member, Ward 1",
-        organization: "City of Albany",
-        startDate: "2023-01-01",
-        description: "Member of Infrastructure Committee; proposed digital permitting system.",
-      },
-    ],
-    committees: [
-      { id: "m-3", committeeId: 3, name: "Infrastructure Committee", role: "Vice Chair" },
-    ],
-    votingHistory: [
-      {
-        id: "v-3",
-        issue: "2024 Budget Approval",
-        vote: "Yes",
-        result: "Passed",
-        date: "2024-03-15",
-      },
-    ],
-    achievements: [
-      {
-        id: "a-3",
-        title: "Modernized Permitting",
-        description:
-          "Championed rollout of an online permit portal cutting average processing time by 40%.",
-        period: "2023",
-      },
-    ],
-    image: "/placeholder.svg?height=64&width=64",
-  },
-  {
-    id: 3,
-    name: "Jennifer Martinez",
-    roleTitle: "City Council Member",
-    termStart: "2023-01-01",
-    termEnd: "2026-12-31",
-    contact: {
-      email: "j.martinez@albany.gov",
-      phone: "(518) 555-0125",
-      office: {
-        addressLine1: "24 Eagle Street",
-        addressLine2: "City Hall, Room 108",
-        city: "Albany",
-        state: "NY",
-        zip: "12207",
-        room: "108",
-        hours: "Tue–Fri, 9:30 AM – 4:30 PM",
-      },
-    },
-    biography:
-      "Jennifer focuses on neighborhood services, environmental stewardship, and inclusive public engagement.",
-    experience: [
-      {
-        id: "exp-4",
-        title: "City Council Member, Ward 2",
-        organization: "City of Albany",
-        startDate: "2023-01-01",
-      },
-      {
-        id: "exp-5",
-        title: "Community Organizer",
-        organization: "Albany Neighborhood Alliance",
-        startDate: "2020-06-01",
-        endDate: "2022-12-31",
-        description: "Led community clean-ups and tree planting programs.",
-      },
-    ],
-    committees: [
-      { id: "m-4", committeeId: 4, name: "Parks & Recreation Committee", role: "Member" },
-    ],
-    votingHistory: [],
-    achievements: [],
-    image: "/placeholder.svg?height=64&width=64",
-  },
-]
-
 // Import API client
 import { officialsApi, transformApiOfficial, transformForApi } from '@/lib/officials-api'
 
-function nextId() {
-  return Math.max(0, ...officialsData.map((o) => o.id)) + 1
-}
-
-// Check if we should use API or fallback to mock data
-const USE_API = process.env.NEXT_PUBLIC_USE_OFFICIALS_API === 'true'
-
+// API-only functions - no fallback to dummy data
 export async function getOfficials() {
-  if (USE_API) {
-    try {
-      const result = await officialsApi.list()
-      if (result.success && result.data) {
-        return result.data.officials.map(transformApiOfficial)
-      }
-    } catch (error) {
-      console.warn('API call failed, falling back to mock data:', error)
+  try {
+    const result = await officialsApi.list()
+    if (result.success && result.data) {
+      // The API returns the officials array directly
+      const officials = Array.isArray(result.data) ? result.data : []
+      return officials.map(transformApiOfficial)
     }
+    throw new Error(result.error || 'Failed to fetch officials')
+  } catch (error) {
+    console.error('Failed to load officials from API:', error)
+    throw error
   }
-  return officialsData
 }
 
 export async function getOfficialById(id: number) {
-  if (USE_API) {
-    try {
-      const result = await officialsApi.get(id)
-      if (result.success && result.data) {
-        return transformApiOfficial(result.data)
-      }
-    } catch (error) {
-      console.warn('API call failed, falling back to mock data:', error)
+  try {
+    const result = await officialsApi.get(id)
+    if (result.success && result.data) {
+      return transformApiOfficial(result.data)
     }
+    throw new Error(result.error || 'Failed to fetch official')
+  } catch (error) {
+    console.error('Failed to load official from API:', error)
+    throw error
   }
-  return officialsData.find((o) => o.id === id)
 }
 
-// Non-persistent in-memory updates for demo purposes.
-export async function upsertOfficial(official: Official) {
-  if (USE_API) {
-    try {
-      const apiData = transformForApi(official)
-      const result = await officialsApi.update(official.id, apiData)
-      if (result.success && result.data) {
-        return transformApiOfficial(result.data)
+export async function getOfficialByEmail(email: string) {
+  try {
+    const result = await officialsApi.list()
+    if (result.success && result.data) {
+      const officials = Array.isArray(result.data) ? result.data : []
+      // Transform the officials first, then search by email
+      const transformedOfficials = officials.map(transformApiOfficial)
+      const official = transformedOfficials.find((o: Official) => o.contact.email === email)
+      if (official) {
+        return official
       }
-    } catch (error) {
-      console.warn('API call failed, falling back to mock data:', error)
+      throw new Error('Official not found')
     }
+    throw new Error(result.error || 'Failed to fetch officials')
+  } catch (error) {
+    console.error('Failed to load official by email from API:', error)
+    throw error
   }
-  
-  const idx = officialsData.findIndex((o) => o.id === official.id)
-  if (idx >= 0) {
-    officialsData[idx] = official
-  } else {
-    officialsData.push({ ...official, id: official.id || nextId() })
+}
+
+export async function getCurrentUserProfile() {
+  try {
+    const result = await officialsApi.getProfile()
+    if (result.success && result.data) {
+      return transformApiOfficial(result.data)
+    }
+    throw new Error(result.error || 'Failed to fetch profile')
+  } catch (error) {
+    console.error('Failed to load current user profile from API:', error)
+    throw error
   }
-  return official
+}
+
+export async function upsertOfficial(official: Official) {
+  try {
+    const apiData = transformForApi(official)
+    const result = await officialsApi.update(official.id, apiData)
+    if (result.success && result.data) {
+      return transformApiOfficial(result.data)
+    }
+    throw new Error(result.error || 'Failed to update official')
+  } catch (error) {
+    console.error('Failed to update official via API:', error)
+    throw error
+  }
 }
 
 export async function createOfficial(partial: Omit<Official, "id">) {
-  if (USE_API) {
-    try {
-      const apiData = transformForApi(partial)
-      const result = await officialsApi.create(apiData)
-      if (result.success && result.data) {
-        return transformApiOfficial(result.data)
-      }
-    } catch (error) {
-      console.warn('API call failed, falling back to mock data:', error)
+  try {
+    const apiData = transformForApi(partial)
+    const result = await officialsApi.create(apiData)
+    if (result.success && result.data) {
+      return transformApiOfficial(result.data)
     }
+    throw new Error(result.error || 'Failed to create official')
+  } catch (error) {
+    console.error('Failed to create official via API:', error)
+    throw error
   }
-  
-  const official: Official = { ...partial, id: nextId() }
-  officialsData.push(official)
-  return official
 }
 
 export async function deleteOfficial(id: number) {
-  if (USE_API) {
-    try {
-      const result = await officialsApi.delete(id)
-      if (result.success) {
-        return true
-      }
-    } catch (error) {
-      console.warn('API call failed, falling back to mock data:', error)
+  try {
+    const result = await officialsApi.delete(id)
+    if (result.success) {
+      return true
     }
+    throw new Error(result.error || 'Failed to delete official')
+  } catch (error) {
+    console.error('Failed to delete official via API:', error)
+    throw error
   }
-  
-  const before = officialsData.length
-  officialsData = officialsData.filter((o) => o.id !== id)
-  return officialsData.length < before
 }

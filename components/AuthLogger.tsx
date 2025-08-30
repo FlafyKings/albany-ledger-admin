@@ -24,6 +24,35 @@ export default function AuthLogger() {
           return
         }
 
+        // Check user role and redirect non-admin users to profile page
+        if (loggedIn) {
+          const userRole = localStorage.getItem('userRole')
+          const currentPath = window.location.pathname
+          
+          // Admin-only pages that non-admin users shouldn't access
+          const adminOnlyPages = [
+            '/',
+            '/content',
+            '/officials',
+            '/meetings',
+            '/documents',
+            '/issues',
+            '/questions',
+            '/newsletter',
+            '/wards',
+            '/elections',
+            '/analytics',
+            '/users',
+            '/settings'
+          ]
+          
+          // If non-admin user tries to access admin pages, redirect to profile
+          if (userRole !== 'admin' && adminOnlyPages.includes(currentPath)) {
+            window.location.replace('/profile')
+            return
+          }
+        }
+
         setIsChecking(false)
       } catch (err) {
         console.error('[Auth] Session check failed:', err)
@@ -43,6 +72,32 @@ export default function AuthLogger() {
         const current = window.location.pathname + (window.location.search || '')
         const url = `/login?redirect=${encodeURIComponent(current)}`
         window.location.replace(url)
+      } else if (loggedIn) {
+        // Check user role and redirect non-admin users to profile page
+        const userRole = localStorage.getItem('userRole')
+        const currentPath = window.location.pathname
+        
+        // Admin-only pages that non-admin users shouldn't access
+        const adminOnlyPages = [
+          '/',
+          '/content',
+          '/officials',
+          '/meetings',
+          '/documents',
+          '/issues',
+          '/questions',
+          '/newsletter',
+          '/wards',
+          '/elections',
+          '/analytics',
+          '/users',
+          '/settings'
+        ]
+        
+        // If non-admin user tries to access admin pages, redirect to profile
+        if (userRole !== 'admin' && adminOnlyPages.includes(currentPath)) {
+          window.location.replace('/profile')
+        }
       }
     })
 

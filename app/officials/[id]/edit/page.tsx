@@ -2,10 +2,11 @@
 
 import { useParams } from "next/navigation"
 import OfficialForm from "@/components/OfficialForm"
+import EditOfficialLoading from "./loading"
 
 export default function EditOfficialPage() {
   const params = useParams()
-  const id = Number(params?.id)
+  const officialId = Number(params.id)
 
-  return <OfficialForm mode="edit" officialId={id} />
+  return <OfficialForm mode="edit" officialId={officialId} />
 }

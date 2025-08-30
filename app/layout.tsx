@@ -4,11 +4,11 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import SidebarShell from '@/components/SidebarShell'
 import AuthLogger from '@/components/AuthLogger'
+import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Albany Ledger Admin Panel',
+  description: 'Albany Ledger',
 }
 
 export default function RootLayout({
@@ -30,6 +30,7 @@ html {
       <body>
         <AuthLogger />
         <SidebarShell>{children}</SidebarShell>
+        <Toaster />
       </body>
     </html>
   )

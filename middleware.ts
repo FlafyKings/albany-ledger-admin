@@ -1,26 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-const isPublicPath = (pathname: string) => {
-  if (pathname === '/login') return true
-  if (pathname.startsWith('/_next')) return true
-  if (pathname === '/favicon.ico') return true
-  if (pathname.startsWith('/public')) return true
-  if (pathname.startsWith('/api')) return true
-  return false
-}
-
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl
-
-  // Let client-side handle auth checks, only handle public paths
-  if (isPublicPath(pathname)) {
-    return NextResponse.next()
-  }
-
-  // For all other paths, let the client-side AuthLogger handle redirects
-  return NextResponse.next()
+export async function middleware(request: NextRequest) {
+  // Temporarily disabled to test login redirect
+  return NextResponse.next({
+    request,
+  })
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

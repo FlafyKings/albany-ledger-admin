@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { useMemo, useState, useEffect } from "react"
-import { Calendar, FileText, Home, MessageSquare, Settings, Users, AlertTriangle, Mail, BarChart3, MapPin, VoteIcon, Shield, Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Building } from 'lucide-react'
+import { Calendar, FileText, Home, MessageSquare, Settings, Users, AlertTriangle, Mail, BarChart3, MapPin, VoteIcon, Shield, Plus, Search, MoreHorizontal, Eye, Edit, Trash2, Building, Copy } from 'lucide-react'
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,7 @@ export default function OfficialsIndexPage() {
   const { toast } = useToast()
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(true)
+  const [copying, setCopying] = useState(false)
   const [list, setList] = useState<Official[]>([])
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
@@ -114,6 +115,27 @@ export default function OfficialsIndexPage() {
     })
   }
 
+  const copyFormLink = async () => {
+    setCopying(true)
+    try {
+      const registrationUrl = `${window.location.origin}/official-registration`
+      await navigator.clipboard.writeText(registrationUrl)
+      toast({
+        title: "Success",
+        description: "Registration link copied to clipboard!",
+      })
+    } catch (error) {
+      console.error('Failed to copy link:', error)
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard.",
+        variant: "destructive"
+      })
+    } finally {
+      setCopying(false)
+    }
+  }
+
   return (
     <>
       <div className="flex-1 flex flex-col">
@@ -140,6 +162,24 @@ export default function OfficialsIndexPage() {
                   Add Official
                 </Button>
               </Link>
+              <Button 
+                variant="outline" 
+                onClick={copyFormLink}
+                disabled={copying}
+                className="border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {copying ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                    Copying...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Form Link
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
@@ -165,14 +205,43 @@ export default function OfficialsIndexPage() {
                   </TableHeader>
                   <TableBody>
                     {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          <div className="flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#d36530]"></div>
-                            <span className="ml-2 text-[#5e6461]">Loading officials...</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="min-w-[220px]">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" />
+                              <div>
+                                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-1" />
+                                <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                          </TableCell>
+                          <TableCell>
+                            <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                          </TableCell>
+                          <TableCell className="min-w-[220px]">
+                            <div className="space-y-1">
+                              <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
+                              <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+                            </div>
+                          </TableCell>
+                          <TableCell className="min-w-[220px]">
+                            <div className="space-y-1">
+                              <div className="h-3 w-36 bg-gray-200 rounded animate-pulse" />
+                              <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse" />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+                          </TableCell>
+                        </TableRow>
+                      ))
                     ) : filtered.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-[#5e6461]/60">

@@ -1,6 +1,6 @@
 import { createClient } from './supabase'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://albany-ledger-ac0ae29a7839.herokuapp.com'
 
 export type ApiResponse<T> = {
   success: boolean
@@ -10,9 +10,13 @@ export type ApiResponse<T> = {
 
 // Get auth token from Supabase session
 async function getAuthToken(): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token || null
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+  } catch (error) {
+    return null
+  }
 }
 
 // Generic API client for all admin panel requests
@@ -26,13 +30,32 @@ export async function apiCall<T>(
       return { success: false, error: 'Not authenticated' }
     }
 
+    // Build headers - only set Content-Type if not explicitly provided
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+    }
+    
+    // Add custom headers, but skip undefined Content-Type
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        // Skip Content-Type if it's undefined or null
+        if (key === 'Content-Type' && (value === undefined || value === null)) {
+          return
+        }
+        if (value !== undefined && value !== null) {
+          headers[key] = value as string
+        }
+      })
+    }
+    
+    // Only set default Content-Type if not already provided AND not FormData
+    if (!('Content-Type' in headers) && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
+    }
+
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -55,6 +78,21 @@ export const api = {
     method: 'POST',
     body: body ? JSON.stringify(body) : undefined,
   }),
+  
+  // Special method for FormData (file uploads)
+  postForm: <T>(endpoint: string, formData: FormData, customHeaders?: Record<string, string>) => {
+    const headers = {
+      // Don't set Content-Type for FormData, let browser set it with boundary
+      'Content-Type': undefined,
+      ...customHeaders,
+    }
+    
+    return apiCall<T>(endpoint, {
+      method: 'POST',
+      body: formData,
+      headers,
+    })
+  },
   
   put: <T>(endpoint: string, body?: any) => apiCall<T>(endpoint, {
     method: 'PUT',
