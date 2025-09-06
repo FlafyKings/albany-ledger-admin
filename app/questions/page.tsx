@@ -68,7 +68,7 @@ const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: FileText, label: "Home Screen", href: "/home-screen" },
   { icon: Users, label: "Officials", href: "/officials" },
-  { icon: Calendar, label: "Meetings", href: "/meetings" },
+  { icon: Calendar, label: "Calendar", href: "/calendar" },
   { icon: FileText, label: "Documents", href: "/documents" },
   { icon: AlertTriangle, label: "Issue Reports", href: "/issues" },
   { icon: MessageSquare, label: "Q&A", href: "/questions", active: true },
