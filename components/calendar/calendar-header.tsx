@@ -2,7 +2,7 @@
 
 import type { CalendarView } from "@/types/calendar"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Download } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, RefreshCw } from "lucide-react"
 
 interface CalendarHeaderProps {
   currentDate: Date
@@ -10,9 +10,11 @@ interface CalendarHeaderProps {
   onViewChange: (view: CalendarView) => void
   onDateChange: (date: Date) => void
   onExport: () => void
+  onRefresh?: () => void
+  isRefreshing?: boolean
 }
 
-export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, onExport }: CalendarHeaderProps) {
+export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, onExport, onRefresh, isRefreshing = false }: CalendarHeaderProps) {
   const goToPrevious = () => {
     const newDate = new Date(currentDate)
     if (view === "month") {
@@ -110,6 +112,19 @@ export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, 
           </Button>
         </div>
 
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
+        
         <Button variant="outline" size="sm" onClick={onExport} className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]">
           <Download className="h-4 w-4 mr-2" />
           Export

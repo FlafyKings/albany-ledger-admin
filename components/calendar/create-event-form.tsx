@@ -19,9 +19,10 @@ import { cn } from "@/lib/utils"
 interface CreateEventFormProps {
   onEventCreate: (event: Omit<CalendarEvent, "id">) => void
   initialDate?: Date
+  isLoading?: boolean
 }
 
-export function CreateEventForm({ onEventCreate, initialDate }: CreateEventFormProps) {
+export function CreateEventForm({ onEventCreate, initialDate, isLoading = false }: CreateEventFormProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [type, setType] = useState<EventType>("commission")
@@ -31,6 +32,48 @@ export function CreateEventForm({ onEventCreate, initialDate }: CreateEventFormP
   const [endDate, setEndDate] = useState<Date | undefined>(initialDate)
   const [endTime, setEndTime] = useState("10:00")
   const [allDay, setAllDay] = useState(false)
+
+  // Auto-adjust end time when start time changes (Google Calendar behavior)
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime)
+    
+    // Auto-set end time to 1 hour later
+    const [hours, minutes] = newStartTime.split(':').map(Number)
+    const endHour = (hours + 1) % 24
+    const endTimeString = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    setEndTime(endTimeString)
+  }
+
+  // When toggling all-day, adjust dates appropriately
+  const handleAllDayChange = (checked: boolean) => {
+    setAllDay(checked)
+    
+    // If switching from all-day to timed event, ensure we have reasonable times
+    if (!checked && startTime === endTime) {
+      setStartTime("09:00")
+      setEndTime("10:00")
+    }
+  }
+
+  // Smart date selection - when start date changes, adjust end date if needed
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date)
+    
+    // If no end date set, or end date is before start date, update end date
+    if (date && (!endDate || endDate < date)) {
+      setEndDate(date)
+    }
+  }
+
+  // Ensure end date is not before start date
+  const handleEndDateChange = (date: Date | undefined) => {
+    if (date && startDate && date < startDate) {
+      // If end date is before start date, set it to start date
+      setEndDate(startDate)
+    } else {
+      setEndDate(date)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,54 +150,12 @@ export function CreateEventForm({ onEventCreate, initialDate }: CreateEventFormP
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Start Date *</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal cursor-pointer",
-                  !startDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="space-y-2">
-          <Label>End Date *</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal cursor-pointer",
-                  !endDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
+      {/* All Day Toggle */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="allDay"
           checked={allDay}
-          onCheckedChange={(checked) => setAllDay(checked as boolean)}
+          onCheckedChange={(checked) => handleAllDayChange(checked as boolean)}
           className="cursor-pointer"
         />
         <Label htmlFor="allDay" className="cursor-pointer">
@@ -162,30 +163,91 @@ export function CreateEventForm({ onEventCreate, initialDate }: CreateEventFormP
         </Label>
       </div>
 
-      {!allDay && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="startTime">Start Time</Label>
-            <Input
-              id="startTime"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="cursor-pointer"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="endTime">End Time</Label>
-            <Input
-              id="endTime"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="cursor-pointer"
-            />
+      {/* Date and Time Inputs - Google Calendar Style */}
+      <div className="space-y-4">
+        {/* Start Date/Time */}
+        <div className="space-y-2">
+          <Label>Start {allDay ? 'Date' : 'Date & Time'} *</Label>
+          <div className="flex gap-2">
+            {/* Date Input */}
+            <div className="flex-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal cursor-pointer",
+                      !startDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={startDate} onSelect={handleStartDateChange} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            {/* Time Input - only show for non-all-day events */}
+            {!allDay && (
+              <div className="w-32">
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                  className="cursor-pointer"
+                />
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* End Date/Time */}
+        <div className="space-y-2">
+          <Label>
+            End {allDay ? 'Date' : 'Date & Time'} *
+            {startDate && endDate && startDate.toDateString() === endDate.toDateString() && !allDay && (
+              <span className="text-xs text-muted-foreground ml-1">(same day)</span>
+            )}
+          </Label>
+          <div className="flex gap-2">
+            {/* Date Input */}
+            <div className="flex-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal cursor-pointer",
+                      !endDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={endDate} onSelect={handleEndDateChange} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            {/* Time Input - only show for non-all-day events */}
+            {!allDay && (
+              <div className="w-32">
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
@@ -208,8 +270,15 @@ export function CreateEventForm({ onEventCreate, initialDate }: CreateEventFormP
         />
       </div>
 
-      <Button type="submit" className="w-full cursor-pointer">
-        Create Event
+      <Button type="submit" className="w-full cursor-pointer" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Creating...
+          </>
+        ) : (
+          "Create Event"
+        )}
       </Button>
     </form>
   )
