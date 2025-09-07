@@ -1,68 +1,82 @@
 "use client"
 
 import type { EventType } from "@/types/calendar"
-import { EVENT_TYPE_CONFIG } from "@/lib/calendar-utils"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 
 interface EventFiltersProps {
   selectedTypes: EventType[]
+  eventTypeConfig: Record<string, { label: string; color: string; bgColor: string; colorHex: string }>
   onTypeToggle: (type: EventType) => void
   onClearAll: () => void
 }
 
-// Filter-specific color variations that are very muted and calm
-const FILTER_COLORS: Record<EventType, { 
-  selected: string; 
-  unselected: string; 
-  text: string;
-}> = {
-  commission: {
-    selected: "bg-[#d36530]/20 hover:bg-[#d36530]/30",
-    unselected: "bg-[#d36530]/3 border-[#d36530]/8 text-[#d36530]/40 hover:bg-[#d36530]/6",
-    text: "text-[#d36530]"
-  },
-  county: {
-    selected: "bg-[#059669]/20 hover:bg-[#059669]/30",
-    unselected: "bg-[#059669]/3 border-[#059669]/8 text-[#059669]/40 hover:bg-[#059669]/6",
-    text: "text-[#059669]"
-  },
-  "school-board": {
-    selected: "bg-[#7c3aed]/20 hover:bg-[#7c3aed]/30",
-    unselected: "bg-[#7c3aed]/3 border-[#7c3aed]/8 text-[#7c3aed]/40 hover:bg-[#7c3aed]/6",
-    text: "text-[#7c3aed]"
-  },
-  election: {
-    selected: "bg-[#dc2626]/20 hover:bg-[#dc2626]/30",
-    unselected: "bg-[#dc2626]/3 border-[#dc2626]/8 text-[#dc2626]/40 hover:bg-[#dc2626]/6",
-    text: "text-[#dc2626]"
-  }
-}
+export function EventFilters({ selectedTypes, eventTypeConfig, onTypeToggle, onClearAll }: EventFiltersProps) {
+  // Get all available event types from the config
+  const allTypes: EventType[] = Object.keys(eventTypeConfig).length > 0 
+    ? Object.keys(eventTypeConfig) as EventType[]
+    : [] // No fallback - wait for event types to load
 
-export function EventFilters({ selectedTypes, onTypeToggle, onClearAll }: EventFiltersProps) {
-  const allTypes: EventType[] = ["commission", "county", "school-board", "election"]
+  // Generate filter colors dynamically from event type config
+  const getFilterColors = (type: EventType) => {
+    const config = eventTypeConfig[type]
+    
+    // If no config available (event types not loaded yet), use default transparent styling
+    if (!config) {
+      return {
+        selected: {
+          className: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300",
+          style: {}
+        },
+        unselected: {
+          className: "bg-transparent hover:bg-gray-50 text-gray-500 border-gray-200",
+          style: {}
+        }
+      }
+    }
+    
+    // Use the raw hex color directly from the config with inline styles
+    const colorHex = config.colorHex
+    
+    return {
+      selected: {
+        className: "border text-black",
+        style: {
+          backgroundColor: `${colorHex}20`, // 20% opacity
+          borderColor: `${colorHex}30`, // 30% opacity
+        }
+      },
+      unselected: {
+        className: "bg-transparent border text-black",
+        style: {
+          borderColor: `${colorHex}20`, // 20% opacity
+        }
+      }
+    }
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium text-[#5e6461]">Filter by type:</span>
       {allTypes.map((type) => {
-        const config = EVENT_TYPE_CONFIG[type]
-        const filterColors = FILTER_COLORS[type]
+        const config = eventTypeConfig[type]
+        const filterColors = getFilterColors(type)
         const isSelected = selectedTypes.includes(type)
 
         return (
           <Button
             key={type}
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => onTypeToggle(type)}
             className={`cursor-pointer transition-all duration-200 ${
               isSelected 
-                ? `${filterColors.selected} ${filterColors.text} border-transparent` 
-                : filterColors.unselected
+                ? filterColors.selected.className
+                : filterColors.unselected.className
             }`}
+            style={isSelected ? filterColors.selected.style : filterColors.unselected.style}
           >
-            {config.label}
+            {config?.label || type}
             {isSelected && <X className="ml-1 h-3 w-3" />}
           </Button>
         )

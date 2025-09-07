@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { CalendarEvent, EventType } from "@/types/calendar"
-import { EVENT_TYPE_CONFIG } from "@/lib/calendar-utils"
+import { eventFormSchema, type EventFormData, validateEventForm } from "@/lib/schemas/event"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,21 +17,64 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
 interface CreateEventFormProps {
+  eventTypeConfig: Record<string, { label: string; color: string; bgColor: string }>
   onEventCreate: (event: Omit<CalendarEvent, "id">) => void
+  onEventUpdate?: (eventId: string, event: Omit<CalendarEvent, "id">) => void
   initialDate?: Date
+  editEvent?: CalendarEvent
   isLoading?: boolean
 }
 
-export function CreateEventForm({ onEventCreate, initialDate, isLoading = false }: CreateEventFormProps) {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [type, setType] = useState<EventType>("commission")
-  const [location, setLocation] = useState("")
-  const [startDate, setStartDate] = useState<Date | undefined>(initialDate)
-  const [startTime, setStartTime] = useState("09:00")
-  const [endDate, setEndDate] = useState<Date | undefined>(initialDate)
-  const [endTime, setEndTime] = useState("10:00")
-  const [allDay, setAllDay] = useState(false)
+export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate, initialDate, editEvent, isLoading = false }: CreateEventFormProps) {
+  const isEditMode = !!editEvent
+  
+  // Initialize form state - use editEvent data if in edit mode, otherwise use defaults
+  const [title, setTitle] = useState(editEvent?.title || "")
+  const [description, setDescription] = useState(editEvent?.description || "")
+  const [type, setType] = useState<EventType>(
+    editEvent?.type || 
+    (Object.keys(eventTypeConfig).length > 0 
+      ? Object.keys(eventTypeConfig)[0] as EventType
+      : "")
+  )
+
+  // Update type when eventTypeConfig changes (when event types load)
+  useEffect(() => {
+    if (!editEvent && Object.keys(eventTypeConfig).length > 0 && !type) {
+      setType(Object.keys(eventTypeConfig)[0] as EventType)
+    }
+  }, [eventTypeConfig, editEvent, type])
+  const [location, setLocation] = useState(editEvent?.location || "")
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    editEvent ? new Date(editEvent.startDate) : initialDate
+  )
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    editEvent ? new Date(editEvent.endDate) : initialDate
+  )
+  const [startTime, setStartTime] = useState(
+    editEvent && !editEvent.allDay 
+      ? new Date(editEvent.startDate).toTimeString().slice(0, 5)
+      : "09:00"
+  )
+  const [endTime, setEndTime] = useState(
+    editEvent && !editEvent.allDay 
+      ? new Date(editEvent.endDate).toTimeString().slice(0, 5)
+      : "10:00"
+  )
+  const [allDay, setAllDay] = useState(editEvent?.allDay || false)
+  
+  // Form validation errors
+  const [errors, setErrors] = useState<Record<string, string[]>>({})
+  
+  // Helper function to get error message for a field
+  const getFieldError = (fieldName: string) => {
+    return errors[fieldName]?.[0] || null
+  }
+  
+  // Helper function to check if a field has an error
+  const hasFieldError = (fieldName: string) => {
+    return !!errors[fieldName]?.length
+  }
 
   // Auto-adjust end time when start time changes (Google Calendar behavior)
   const handleStartTimeChange = (newStartTime: string) => {
@@ -55,7 +98,7 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
     }
   }
 
-  // Smart date selection - when start date changes, adjust end date if needed
+  // Handle start date change
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDate(date)
     
@@ -65,7 +108,7 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
     }
   }
 
-  // Ensure end date is not before start date
+  // Handle end date change
   const handleEndDateChange = (date: Date | undefined) => {
     if (date && startDate && date < startDate) {
       // If end date is before start date, set it to start date
@@ -77,52 +120,92 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Clear previous errors
+    setErrors({})
 
-    if (!title || !startDate || !endDate) return
-
-    const start = allDay
-      ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0)
-      : new Date(
-          startDate.getFullYear(),
-          startDate.getMonth(),
-          startDate.getDate(),
-          Number.parseInt(startTime.split(":")[0]),
-          Number.parseInt(startTime.split(":")[1]),
-        )
-
-    const end = allDay
-      ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59)
-      : new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate(),
-          Number.parseInt(endTime.split(":")[0]),
-          Number.parseInt(endTime.split(":")[1]),
-        )
-
-    onEventCreate({
+    // Prepare form data for validation
+    const formData = {
       title,
       description: description || undefined,
       type,
       location: location || undefined,
+      allDay,
+      startDate,
+      endDate: allDay ? endDate : undefined,
+      startTime: allDay ? undefined : startTime,
+      endTime: allDay ? undefined : endTime,
+    }
+
+    // Validate form data using Zod
+    const validation = validateEventForm(formData)
+    
+    if (!validation.success) {
+      setErrors(validation.errors)
+      return
+    }
+
+    // If validation passes, proceed with creating the event
+    const validatedData = validation.data
+
+    const start = allDay
+      ? new Date(validatedData.startDate.getFullYear(), validatedData.startDate.getMonth(), validatedData.startDate.getDate(), 0, 0, 0)
+      : new Date(
+          validatedData.startDate.getFullYear(),
+          validatedData.startDate.getMonth(),
+          validatedData.startDate.getDate(),
+          Number.parseInt(validatedData.startTime!.split(":")[0]),
+          Number.parseInt(validatedData.startTime!.split(":")[1]),
+        )
+
+    const end = allDay
+      ? new Date(validatedData.endDate!.getFullYear(), validatedData.endDate!.getMonth(), validatedData.endDate!.getDate(), 23, 59, 59)
+      : new Date(
+          validatedData.startDate.getFullYear(),
+          validatedData.startDate.getMonth(),
+          validatedData.startDate.getDate(),
+          Number.parseInt(validatedData.endTime!.split(":")[0]),
+          Number.parseInt(validatedData.endTime!.split(":")[1]),
+        )
+
+    const eventData = {
+      title: validatedData.title,
+      description: validatedData.description || undefined,
+      type: validatedData.type,
+      location: validatedData.location || undefined,
       startDate: start,
       endDate: end,
-      allDay,
-    })
+      allDay: validatedData.allDay,
+    }
 
-    // Reset form
-    setTitle("")
-    setDescription("")
-    setLocation("")
-    setStartDate(undefined)
-    setEndDate(undefined)
-    setStartTime("09:00")
-    setEndTime("10:00")
-    setAllDay(false)
+    if (isEditMode && editEvent && onEventUpdate) {
+      onEventUpdate(editEvent.id, eventData)
+    } else {
+      onEventCreate(eventData)
+    }
+
+    // Reset form only if not in edit mode
+    if (!isEditMode) {
+      setTitle("")
+      setDescription("")
+      setType(Object.keys(eventTypeConfig).length > 0 ? Object.keys(eventTypeConfig)[0] as EventType : "")
+      setLocation("")
+      setStartDate(undefined)
+      setEndDate(undefined)
+      setStartTime("09:00")
+      setEndTime("10:00")
+      setAllDay(false)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 mx-4">
+      {/* General form errors */}
+      {getFieldError("general") && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">{getFieldError("general")}</p>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="title">Event Title *</Label>
         <Input
@@ -130,24 +213,36 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter event title"
-          required
+          className={hasFieldError("title") ? "border-red-500 focus:border-red-500" : ""}
         />
+        {getFieldError("title") && (
+          <p className="text-sm text-red-600">{getFieldError("title")}</p>
+        )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="type">Event Type</Label>
         <Select value={type} onValueChange={(value: EventType) => setType(value)}>
-          <SelectTrigger className="cursor-pointer">
-            <SelectValue />
+          <SelectTrigger className={`cursor-pointer ${hasFieldError("type") ? "border-red-500 focus:border-red-500" : ""}`}>
+            <SelectValue placeholder={Object.keys(eventTypeConfig).length === 0 ? "Loading event types..." : "Select event type"} />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(EVENT_TYPE_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key} className="cursor-pointer">
-                {config.label}
+            {Object.entries(eventTypeConfig).length === 0 ? (
+              <SelectItem value="" disabled>
+                No event types available
               </SelectItem>
-            ))}
+            ) : (
+              Object.entries(eventTypeConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key} className="cursor-pointer">
+                  {config.label}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
+        {getFieldError("type") && (
+          <p className="text-sm text-red-600">{getFieldError("type")}</p>
+        )}
       </div>
 
       {/* All Day Toggle */}
@@ -163,14 +258,13 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
         </Label>
       </div>
 
-      {/* Date and Time Inputs - Google Calendar Style */}
+      {/* Date and Time Inputs */}
       <div className="space-y-4">
-        {/* Start Date/Time */}
-        <div className="space-y-2">
-          <Label>Start {allDay ? 'Date' : 'Date & Time'} *</Label>
-          <div className="flex gap-2">
-            {/* Date Input */}
-            <div className="flex-1">
+        {allDay ? (
+          /* All Day Event - Two Date Inputs */
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Start Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -178,6 +272,60 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
                     className={cn(
                       "w-full justify-start text-left font-normal cursor-pointer",
                       !startDate && "text-muted-foreground",
+                      hasFieldError("startDate") && "border-red-500 focus:border-red-500",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "MMM d, yyyy") : "Pick start date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={startDate} onSelect={handleStartDateChange} initialFocus />
+                </PopoverContent>
+              </Popover>
+              {getFieldError("startDate") && (
+                <p className="text-sm text-red-600">{getFieldError("startDate")}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label>End Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal cursor-pointer",
+                      !endDate && "text-muted-foreground",
+                      hasFieldError("endDate") && "border-red-500 focus:border-red-500",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "MMM d, yyyy") : "Pick end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={endDate} onSelect={handleEndDateChange} initialFocus />
+                </PopoverContent>
+              </Popover>
+              {getFieldError("endDate") && (
+                <p className="text-sm text-red-600">{getFieldError("endDate")}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Timed Event - One Date + Two Time Inputs */
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal cursor-pointer",
+                      !startDate && "text-muted-foreground",
+                      hasFieldError("startDate") && "border-red-500 focus:border-red-500",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -188,65 +336,39 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
                   <Calendar mode="single" selected={startDate} onSelect={handleStartDateChange} initialFocus />
                 </PopoverContent>
               </Popover>
+              {getFieldError("startDate") && (
+                <p className="text-sm text-red-600">{getFieldError("startDate")}</p>
+              )}
             </div>
-            
-            {/* Time Input - only show for non-all-day events */}
-            {!allDay && (
-              <div className="w-32">
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Time *</Label>
                 <Input
                   type="time"
                   value={startTime}
                   onChange={(e) => handleStartTimeChange(e.target.value)}
-                  className="cursor-pointer"
+                  className={`cursor-pointer ${hasFieldError("startTime") ? "border-red-500 focus:border-red-500" : ""}`}
                 />
+                {getFieldError("startTime") && (
+                  <p className="text-sm text-red-600">{getFieldError("startTime")}</p>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* End Date/Time */}
-        <div className="space-y-2">
-          <Label>
-            End {allDay ? 'Date' : 'Date & Time'} *
-            {startDate && endDate && startDate.toDateString() === endDate.toDateString() && !allDay && (
-              <span className="text-xs text-muted-foreground ml-1">(same day)</span>
-            )}
-          </Label>
-          <div className="flex gap-2">
-            {/* Date Input */}
-            <div className="flex-1">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal cursor-pointer",
-                      !endDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "MMM d, yyyy") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={endDate} onSelect={handleEndDateChange} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            {/* Time Input - only show for non-all-day events */}
-            {!allDay && (
-              <div className="w-32">
+              <div className="space-y-2">
+                <Label>End Time *</Label>
                 <Input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="cursor-pointer"
+                  className={`cursor-pointer ${hasFieldError("endTime") ? "border-red-500 focus:border-red-500" : ""}`}
                 />
+                {getFieldError("endTime") && (
+                  <p className="text-sm text-red-600">{getFieldError("endTime")}</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -256,7 +378,11 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Enter event location"
+          className={hasFieldError("location") ? "border-red-500 focus:border-red-500" : ""}
         />
+        {getFieldError("location") && (
+          <p className="text-sm text-red-600">{getFieldError("location")}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -267,17 +393,27 @@ export function CreateEventForm({ onEventCreate, initialDate, isLoading = false 
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter event description"
           rows={3}
+          className={hasFieldError("description") ? "border-red-500 focus:border-red-500" : ""}
         />
+        {getFieldError("description") && (
+          <p className="text-sm text-red-600">{getFieldError("description")}</p>
+        )}
       </div>
 
-      <Button type="submit" className="w-full cursor-pointer" disabled={isLoading}>
+      <Button 
+        type="submit" 
+        className="w-full cursor-pointer" 
+        disabled={isLoading || Object.keys(eventTypeConfig).length === 0}
+      >
         {isLoading ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Creating...
+            {isEditMode ? "Updating..." : "Creating..."}
           </>
+        ) : Object.keys(eventTypeConfig).length === 0 ? (
+          "Loading event types..."
         ) : (
-          "Create Event"
+          isEditMode ? "Update Event" : "Create Event"
         )}
       </Button>
     </form>

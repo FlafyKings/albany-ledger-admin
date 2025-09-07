@@ -2,73 +2,73 @@
 
 import { useState, useMemo, useEffect } from "react"
 import type { CalendarEvent, CalendarView, EventType } from "@/types/calendar"
-import { downloadICS } from "@/lib/calendar-utils"
-import { calendarApi, apiEventToLocal } from "@/lib/calendar-api"
+import type { EventTypeAPI } from "@/lib/calendar-api"
 import { CalendarSkeleton } from "./calendar-skeleton"
 import { CalendarHeader } from "./calendar-header"
 import { MonthView } from "./month-view"
 import { WeekView } from "./week-view"
 import { EventFilters } from "./event-filters"
 import { EventDetailsModal } from "./event-details-modal"
-import { useToast } from "@/hooks/use-toast"
 
 interface CalendarProps {
   events: CalendarEvent[]
+  eventTypes: EventTypeAPI[]
   onDateClick?: (date: Date) => void
-  onEventsChange?: (events: CalendarEvent[]) => void
+  onEventEdit?: (event: CalendarEvent) => void
+  onExport?: () => void
+  onRefresh?: () => void
   isLoading?: boolean
+  isRefreshing?: boolean
 }
 
-export function Calendar({ events, onDateClick, onEventsChange, isLoading = false }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+export function Calendar({ events, eventTypes, onDateClick, onEventEdit, onExport, onRefresh, isLoading = false, isRefreshing = false }: CalendarProps) {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [view, setView] = useState<CalendarView>("month")
-  const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([
-    "commission",
-    "county",
-    "school-board",
-    "election",
-  ])
+  const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const { toast } = useToast()
 
-  // Load additional events when the view or date changes
-  useEffect(() => {
-    loadEventsForPeriod()
-  }, [currentDate, view]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Create dynamic event type configuration from API data
+  const eventTypeConfig = useMemo(() => {
+    const config: Record<string, { label: string; color: string; bgColor: string; colorHex: string }> = {}
+    
+    eventTypes.forEach(eventType => {
+      config[eventType.name] = {
+        label: eventType.display_name,
+        color: `text-[${eventType.color_hex}]`,
+        bgColor: `bg-[${eventType.color_hex}]/20 hover:bg-[${eventType.color_hex}]/30`,
+        colorHex: eventType.color_hex, // Include raw hex color for chips
+      }
+    })
+    
+    return config
+  }, [eventTypes])
 
-  const loadEventsForPeriod = async () => {
-    if (view === "month") {
-      setIsLoadingMore(true)
-      try {
-        const month = currentDate.getMonth() + 1 // API expects 1-based month
-        const year = currentDate.getFullYear()
-        
-        const response = await calendarApi.getCalendarEvents(month, year, view)
-        if (response.success && response.data) {
-          const newEvents = response.data.events.map(apiEventToLocal)
-          // Merge with existing events, avoiding duplicates
-          const existingIds = new Set(events.map(e => e.id))
-          const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id))
-          
-          if (uniqueNewEvents.length > 0 && onEventsChange) {
-            onEventsChange([...events, ...uniqueNewEvents])
-          }
+  // Helper function to get event type config for an event
+  const getEventTypeConfig = (event: CalendarEvent) => {
+    // First try to get from the eventTypeConfig (for filtering and form dropdowns)
+    const configFromTypes = eventTypeConfig[event.type as keyof typeof eventTypeConfig]
+    if (configFromTypes) {
+      return {
+        label: configFromTypes.label,
+        color: "text-black", // Use black text
+        bgColor: "hover:opacity-80", // Simple hover effect
+        style: {
+          backgroundColor: `${configFromTypes.colorHex}20`, // 20% opacity
+          borderColor: `${configFromTypes.colorHex}30`, // 30% opacity
         }
-      } catch (error) {
-        console.error('Error loading events for period:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load events for the selected period.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoadingMore(false)
       }
     }
+    
+    // Fallback for events that might not be in the current eventTypes list
+    return {
+      label: event.type,
+      color: "text-black",
+      bgColor: "bg-gray-200 hover:bg-gray-300",
+      style: {}
+    }
   }
+
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => selectedEventTypes.includes(event.type))
@@ -87,33 +87,6 @@ export function Calendar({ events, onDateClick, onEventsChange, isLoading = fals
     setIsEventModalOpen(true)
   }
 
-  const handleExport = async () => {
-    try {
-      // Try to use the API export first
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-      
-      const response = await calendarApi.exportCalendar({
-        format: 'ics',
-        start_date: startOfMonth.toISOString(),
-        end_date: endOfMonth.toISOString(),
-        event_types: selectedEventTypes,
-      })
-      
-      if (response.success) {
-        toast({
-          title: "Export",
-          description: response.data?.message || "Export functionality is being prepared.",
-        })
-      } else {
-        // Fallback to local export
-        downloadICS(filteredEvents, "calendar-events.ics")
-      }
-    } catch (error) {
-      // Fallback to local export on error
-      downloadICS(filteredEvents, "calendar-events.ics")
-    }
-  }
 
   const handleDateClick = (date: Date) => {
     onDateClick?.(date)
@@ -123,28 +96,8 @@ export function Calendar({ events, onDateClick, onEventsChange, isLoading = fals
     setCurrentDate(date)
   }
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    try {
-      // Reload current period events
-      await loadEventsForPeriod()
-      toast({
-        title: "Success",
-        description: "Calendar events refreshed successfully!",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to refresh events. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
-  // Show skeleton if explicitly loading
-  if (isLoading) {
+  // Show skeleton if explicitly loading or no event types loaded yet
+  if (isLoading || eventTypes.length === 0) {
     return <CalendarSkeleton view={view} />
   }
 
@@ -155,30 +108,25 @@ export function Calendar({ events, onDateClick, onEventsChange, isLoading = fals
         view={view}
         onViewChange={setView}
         onDateChange={handleDateChange}
-        onExport={handleExport}
-        onRefresh={handleRefresh}
+        onExport={onExport || (() => {})}
+        onRefresh={onRefresh || (() => {})}
         isRefreshing={isRefreshing}
       />
 
       <EventFilters
         selectedTypes={selectedEventTypes}
+        eventTypeConfig={eventTypeConfig}
         onTypeToggle={handleEventTypeToggle}
         onClearAll={handleClearAllFilters}
       />
 
-      {isLoadingMore && (
-        <div className="text-center py-2">
-          <div className="inline-flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#d36530] mr-2"></div>
-            <span className="text-[#5e6461]/70 text-sm">Loading events...</span>
-          </div>
-        </div>
-      )}
 
       {view === "month" ? (
         <MonthView
           currentDate={currentDate}
           events={filteredEvents}
+          eventTypeConfig={eventTypeConfig}
+          getEventTypeConfig={getEventTypeConfig}
           onEventClick={handleEventClick}
           onDateClick={handleDateClick}
         />
@@ -186,6 +134,8 @@ export function Calendar({ events, onDateClick, onEventsChange, isLoading = fals
         <WeekView
           currentDate={currentDate}
           events={filteredEvents}
+          eventTypeConfig={eventTypeConfig}
+          getEventTypeConfig={getEventTypeConfig}
           onEventClick={handleEventClick}
           onDateClick={handleDateClick}
         />
@@ -193,14 +143,14 @@ export function Calendar({ events, onDateClick, onEventsChange, isLoading = fals
 
       <EventDetailsModal 
         event={selectedEvent} 
+        eventTypeConfig={eventTypeConfig}
         isOpen={isEventModalOpen} 
         onClose={() => setIsEventModalOpen(false)}
-        onEventDelete={(eventId) => {
-          const updatedEvents = events.filter(e => e.id !== eventId)
-          onEventsChange?.(updatedEvents)
+        onEventDelete={() => {
+          // Event deletion should be handled by parent component
         }}
         onEventEdit={(event) => {
-          // TODO: Implement edit functionality - for now just close modal
+          onEventEdit?.(event)
           setIsEventModalOpen(false)
         }}
       />

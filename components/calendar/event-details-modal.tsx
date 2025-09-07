@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import type { CalendarEvent } from "@/types/calendar"
-import { EVENT_TYPE_CONFIG } from "@/lib/calendar-utils"
 import { formatDate, formatTime } from "@/lib/calendar-utils"
 import { calendarApi } from "@/lib/calendar-api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,20 +13,26 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 interface EventDetailsModalProps {
   event: CalendarEvent | null
+  eventTypeConfig: Record<string, { label: string; color: string; bgColor: string; colorHex: string }>
   isOpen: boolean
   onClose: () => void
   onEventDelete?: (eventId: string) => void
   onEventEdit?: (event: CalendarEvent) => void
 }
 
-export function EventDetailsModal({ event, isOpen, onClose, onEventDelete, onEventEdit }: EventDetailsModalProps) {
+export function EventDetailsModal({ event, eventTypeConfig, isOpen, onClose, onEventDelete, onEventEdit }: EventDetailsModalProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { toast } = useToast()
 
   if (!event) return null
 
-  const config = EVENT_TYPE_CONFIG[event.type]
+  const config = eventTypeConfig[event.type] || { 
+    label: event.type, 
+    color: "text-gray-600", 
+    bgColor: "bg-gray-200 hover:bg-gray-300",
+    colorHex: "#6b7280"
+  }
 
   const handleEdit = () => {
     onEventEdit?.(event)
@@ -73,8 +78,25 @@ export function EventDetailsModal({ event, isOpen, onClose, onEventDelete, onEve
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
+              {!event.allDay && (
+                <span className="text-sm opacity-75 mr-2">
+                  {new Date(event.startDate).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true
+                  })}
+                </span>
+              )}
               {event.title}
-              <Badge className={`${config.bgColor} ${config.color} border-0`}>{config.label}</Badge>
+              <Badge 
+                className="border-0 text-black" 
+                style={{
+                  backgroundColor: `${config.colorHex}20`,
+                  borderColor: `${config.colorHex}30`
+                }}
+              >
+                {config.label}
+              </Badge>
             </DialogTitle>
           </DialogHeader>
 

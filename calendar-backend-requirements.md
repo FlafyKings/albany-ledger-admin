@@ -1,90 +1,46 @@
-# Calendar System - Backend & Database Requirements
+# Calendar API Schema Documentation - Updated
 
-## Overview
-This document outlines the backend and database requirements for implementing a calendar system that supports event management, filtering, and export functionality.
+## Key Changes Summary
 
-## Database Schema Requirements
+### ✅ **Event Type ID Integration**
+- **Events now use `event_type_id`** instead of `event_type` string
+- **Foreign key relationship** between events and event_types tables
+- **Event type validation** ensures valid event type IDs
 
-### 1. Events Table
-```sql
-CREATE TABLE events (
-  id VARCHAR(255) PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  start_date TIMESTAMP NOT NULL,
-  end_date TIMESTAMP,
-  all_day BOOLEAN DEFAULT false,
-  event_type VARCHAR(50) NOT NULL,
-  location VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_by VARCHAR(255),
-  updated_by VARCHAR(255)
-);
-```
+### ✅ **Enhanced Event Responses**
+- **All event listings now include event type details** (name, display_name, color_hex)
+- **Calendar views include event type information** for UI rendering
+- **Statistics use event type names** from the relationship
 
-**Event Types:**
-- `commission` - Commission meetings
-- `county` - County events
-- `school-board` - School board meetings
-- `election` - Election events
+## Updated API Endpoints
 
-### 2. Event Attendees (Optional - for future expansion)
-```sql
-CREATE TABLE event_attendees (
-  id VARCHAR(255) PRIMARY KEY,
-  event_id VARCHAR(255) NOT NULL,
-  user_id VARCHAR(255) NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
-);
-```
+### List Events - Enhanced Response
+**GET** `/api/events`
 
-**Attendee Status:**
-- `pending` - Invitation sent, no response
-- `accepted` - User confirmed attendance
-- `declined` - User declined invitation
-
-### 3. Event Types Configuration (Optional - for dynamic management)
-```sql
-CREATE TABLE event_types (
-  id VARCHAR(255) PRIMARY KEY,
-  name VARCHAR(50) UNIQUE NOT NULL,
-  display_name VARCHAR(100) NOT NULL,
-  color_hex VARCHAR(7) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## API Endpoints Requirements
-
-### 1. Events CRUD Operations
-
-#### GET /api/events
-**Purpose:** Retrieve events with filtering and pagination
-**Query Parameters:**
-- `start_date` (ISO 8601) - Filter events from this date
-- `end_date` (ISO 8601) - Filter events until this date
-- `event_type` (string) - Filter by specific event type
-- `limit` (integer) - Number of events per page (default: 50)
-- `offset` (integer) - Number of events to skip (default: 0)
-
-**Response:**
+#### New Response Schema
 ```json
 {
   "events": [
     {
       "id": "string",
       "title": "string",
-      "description": "string",
-      "start_date": "ISO 8601 timestamp",
-      "end_date": "ISO 8601 timestamp",
+      "description": "string | null",
+      "start_date": "string (ISO 8601)",
+      "end_date": "string (ISO 8601) | null",
       "all_day": "boolean",
-      "event_type": "string",
-      "location": "string",
-      "created_at": "ISO 8601 timestamp",
-      "updated_at": "ISO 8601 timestamp"
+      "event_type_id": "string",
+      "location": "string | null",
+      "created_at": "string (ISO 8601)",
+      "updated_at": "string (ISO 8601)",
+      "created_by": "string | null",
+      "updated_by": "string | null",
+      "event_types": {
+        "id": "string",
+        "name": "string",
+        "display_name": "string",
+        "color_hex": "string",
+        "created_at": "string (ISO 8601)"
+      }
     }
   ],
   "total": "integer",
@@ -93,238 +49,136 @@ CREATE TABLE event_types (
 }
 ```
 
-#### GET /api/events/{id}
-**Purpose:** Retrieve a specific event
-**Response:** Single event object (same structure as above)
+#### Updated Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `event_type_id` | string | No | Filter by event type ID (replaces event_type) |
 
-#### POST /api/events
-**Purpose:** Create a new event
-**Authentication:** Required (Admin only)
-**Request Body:**
+### Create Event - Updated Request
+**POST** `/api/events`
+
+#### New Request Schema
 ```json
 {
   "title": "string (required, max 255 chars)",
   "description": "string (optional)",
-  "start_date": "ISO 8601 timestamp (required)",
-  "end_date": "ISO 8601 timestamp (optional)",
-  "all_day": "boolean (default: false)",
-  "event_type": "string (required, must be valid type)",
+  "start_date": "string (required, ISO 8601)",
+  "end_date": "string (optional, ISO 8601)",
+  "all_day": "boolean (optional, default: false)",
+  "event_type_id": "string (required, valid event type ID)",
   "location": "string (optional, max 255 chars)"
 }
 ```
 
-#### PUT /api/events/{id}
-**Purpose:** Update an existing event
-**Authentication:** Required (Admin only)
-**Request Body:** Same as POST (all fields optional for updates)
+#### Example Request
+```json
+{
+  "title": "Budget Committee Meeting",
+  "description": "Monthly budget review and planning session",
+  "start_date": "2024-04-15T14:00:00Z",
+  "end_date": "2024-04-15T16:00:00Z",
+  "all_day": false,
+  "event_type_id": "commission-type",
+  "location": "City Hall, Conference Room A"
+}
+```
 
-#### DELETE /api/events/{id}
-**Purpose:** Delete an event
-**Authentication:** Required (Admin only)
+### Update Event - Updated Request
+**PUT** `/api/events/{event_id}`
 
-### 2. Calendar-Specific Endpoints
+#### New Request Schema
+```json
+{
+  "title": "string (optional, max 255 chars)",
+  "description": "string (optional)",
+  "start_date": "string (optional, ISO 8601)",
+  "end_date": "string (optional, ISO 8601)",
+  "all_day": "boolean (optional)",
+  "event_type_id": "string (optional, valid event type ID)",
+  "location": "string (optional, max 255 chars)"
+}
+```
 
-#### GET /api/calendar/events
-**Purpose:** Retrieve events optimized for calendar display
-**Query Parameters:**
-- `month` (integer) - Month (1-12)
-- `year` (integer) - Year
-- `view` (string) - Calendar view type (`month` or `week`)
+### Calendar Events - Enhanced Response
+**GET** `/api/calendar/events`
 
-**Response:**
+#### New Response Schema
 ```json
 {
   "events": [
     {
       "id": "string",
       "title": "string",
-      "start_date": "ISO 8601 timestamp",
-      "end_date": "ISO 8601 timestamp",
+      "start_date": "string (ISO 8601)",
+      "end_date": "string (ISO 8601) | null",
       "all_day": "boolean",
-      "event_type": "string"
+      "event_type_id": "string",
+      "event_types": {
+        "id": "string",
+        "name": "string",
+        "display_name": "string",
+        "color_hex": "string"
+      }
     }
   ]
 }
 ```
 
-#### GET /api/calendar/export
-**Purpose:** Export calendar data in various formats
-**Query Parameters:**
-- `format` (string) - Export format (`ics`, `csv`, `pdf`)
-- `start_date` (ISO 8601) - Export from this date
-- `end_date` (ISO 8601) - Export until this date
-- `event_types` (array) - Filter by event types
+## Event Type IDs Reference
 
-**Response:** File download with appropriate MIME type
+### Available Event Types
+| ID | Name | Display Name | Color |
+|----|------|--------------|-------|
+| `commission-type` | commission | Commission Meetings | #3B82F6 |
+| `county-type` | county | County Events | #10B981 |
+| `school-board-type` | school-board | School Board Meetings | #F59E0B |
+| `election-type` | election | Election Events | #EF4444 |
 
-### 3. Event Types Management
+## Example Usage
 
-#### GET /api/event-types
-**Purpose:** Retrieve available event types
-**Response:**
-```json
-[
-  {
-    "name": "string",
-    "display_name": "string",
-    "color_hex": "string"
-  }
-]
+### Get Events with Event Type Details
+```bash
+GET /api/events?event_type_id=commission-type&limit=5
+Authorization: Bearer <jwt_token>
 ```
 
-#### POST /api/event-types
-**Purpose:** Create new event type (Admin only)
-**Request Body:**
-```json
+### Create Event with Event Type ID
+```bash
+POST /api/events
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
 {
-  "name": "string (required, unique)",
-  "display_name": "string (required)",
-  "color_hex": "string (required, valid hex color)"
+  "title": "City Council Meeting",
+  "start_date": "2024-04-15T19:00:00Z",
+  "end_date": "2024-04-15T21:00:00Z",
+  "event_type_id": "commission-type",
+  "location": "City Hall"
 }
 ```
 
-## Data Validation Requirements
+### Update Event Type
+```bash
+PUT /api/events/event-1
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
 
-### 1. Event Validation Rules
-- **title**: Required, 1-255 characters
-- **start_date**: Required, valid ISO 8601 timestamp
-- **end_date**: Optional, must be after start_date if provided
-- **event_type**: Required, must be from predefined list
-- **all_day**: Boolean, defaults to false
-- **location**: Optional, max 255 characters
-- **description**: Optional, no length limit
-
-### 2. Business Logic Rules
-- End date must be after start date
-- All-day events should have end_date set to end of start_date day
-- Event types must be from predefined list
-- Only authenticated admin users can create/edit/delete events
-- All users can view events
-
-## Performance Requirements
-
-### 1. Database Indexes
-Create indexes on frequently queried columns:
-- `start_date` - For date range queries
-- `event_type` - For filtering by type
-- `start_date, event_type` - Composite index for calendar queries
-- `created_by` - For user-specific queries
-
-### 2. Caching Strategy
-- Cache event types (rarely change, 1 hour TTL)
-- Cache monthly calendar data (5 minute TTL)
-- Cache user permissions (15 minute TTL)
-
-## Security Requirements
-
-### 1. Authentication & Authorization
-- All endpoints require valid authentication token
-- Admin-only endpoints must verify admin role
-- Implement rate limiting on all endpoints
-- Validate and sanitize all input data
-
-### 2. Data Protection
-- Implement proper access controls
-- Log all administrative actions
-- Validate file uploads for export functionality
-- Prevent SQL injection and XSS attacks
-
-## Integration Requirements
-
-### 1. Calendar Export Formats
-
-#### ICS (iCalendar) Format
-- Generate standard ICS files for external calendar applications
-- Include all event details (title, description, location, times)
-- Support for recurring events (future enhancement)
-
-#### CSV Format
-- Export events as comma-separated values
-- Include all event fields
-- Properly escape special characters
-
-#### PDF Format
-- Generate printable calendar views
-- Support monthly and weekly layouts
-- Include event details and color coding
-
-### 2. Notification System (Future Enhancement)
-- Email notifications for new events
-- Reminder system for upcoming events
-- Integration with existing notification infrastructure
-
-### 3. External Calendar Integration (Future Enhancement)
-- Google Calendar sync
-- Outlook Calendar sync
-- Two-way synchronization capabilities
-
-## Error Handling
-
-### 1. Standard Error Response Format
-```json
 {
-  "error": {
-    "code": "string",
-    "message": "string",
-    "details": "object (optional)"
-  }
+  "event_type_id": "county-type"
 }
 ```
 
-### 2. Common Error Codes
-- `VALIDATION_ERROR` - Invalid input data
-- `NOT_FOUND` - Resource not found
-- `UNAUTHORIZED` - Authentication required
-- `FORBIDDEN` - Insufficient permissions
-- `RATE_LIMITED` - Too many requests
-- `SERVER_ERROR` - Internal server error
+## Benefits of the Changes
 
-## Monitoring & Analytics
+1. **Better Data Integrity**: Foreign key relationships ensure valid event types
+2. **Enhanced Frontend Support**: Event type details (colors, display names) included in responses
+3. **Improved Performance**: Single query returns all needed data
+4. **Consistent API Design**: All endpoints use event_type_id consistently
+5. **Future-Proof**: Easy to add new event type properties without API changes
 
-### 1. Performance Metrics
-- API response times
-- Database query performance
-- Calendar load times
-- Export generation times
+## Migration Notes
 
-### 2. Usage Analytics
-- Most viewed event types
-- Popular time slots
-- User engagement metrics
-- Export format preferences
-
-## Scalability Considerations
-
-### 1. Database Optimization
-- Implement proper indexing strategy
-- Consider partitioning for large datasets
-- Use connection pooling
-- Implement read replicas for heavy read workloads
-
-### 2. API Optimization
-- Implement pagination for large result sets
-- Use compression for API responses
-- Implement proper HTTP caching headers
-- Consider GraphQL for complex queries (future)
-
-### 3. File Storage
-- Use cloud storage for exported files
-- Implement file cleanup policies
-- Consider CDN for static assets
-
-## Testing Requirements
-
-### 1. Unit Tests
-- Test all validation logic
-- Test business rule enforcement
-- Test error handling scenarios
-
-### 2. Integration Tests
-- Test API endpoints with various inputs
-- Test database operations
-- Test export functionality
-
-### 3. Performance Tests
-- Load testing for calendar queries
-- Stress testing for concurrent users
-- Export generation performance testing
+- **Database**: Events table now uses `event_type_id` with foreign key to `event_types.id`
+- **API**: All endpoints now expect/return `event_type_id` instead of `event_type` string
+- **Validation**: Event type validation now checks against actual event type IDs
+- **Responses**: All event responses include full event type details for UI rendering

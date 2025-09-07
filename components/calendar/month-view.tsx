@@ -1,7 +1,7 @@
 "use client"
 
 import type { CalendarEvent } from "@/types/calendar"
-import { getMonthDays, getEventsForDay, isToday, EVENT_TYPE_CONFIG } from "@/lib/calendar-utils"
+import { getMonthDays, getEventsForDay, isToday } from "@/lib/calendar-utils"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -11,11 +11,13 @@ import { useState } from "react"
 interface MonthViewProps {
   currentDate: Date
   events: CalendarEvent[]
+  eventTypeConfig: Record<string, { label: string; color: string; bgColor: string }>
+  getEventTypeConfig: (event: CalendarEvent) => { label: string; color: string; bgColor: string; style: React.CSSProperties }
   onEventClick: (event: CalendarEvent) => void
   onDateClick: (date: Date) => void
 }
 
-export function MonthView({ currentDate, events, onEventClick, onDateClick }: MonthViewProps) {
+export function MonthView({ currentDate, events, eventTypeConfig, getEventTypeConfig, onEventClick, onDateClick }: MonthViewProps) {
   const monthDays = getMonthDays(currentDate)
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
   const [hoveredDay, setHoveredDay] = useState<number | null>(null)
@@ -49,7 +51,7 @@ export function MonthView({ currentDate, events, onEventClick, onDateClick }: Mo
             <div
               key={index}
               className={cn(
-                "min-h-[120px] border-r border-b border-[#5e6461]/10 p-2 relative transition-colors duration-150",
+                "min-h-[180px] border-r border-b border-[#5e6461]/10 p-2 relative transition-colors duration-150",
                 !isCurrentMonthDay && "bg-[#5e6461]/5 text-[#5e6461]/60",
                 isTodayDate && "bg-[#d36530]/10 border-[#d36530]/30",
                 showHoverAdd && "bg-[#5e6461]/10",
@@ -85,21 +87,33 @@ export function MonthView({ currentDate, events, onEventClick, onDateClick }: Mo
 
               <div className="space-y-1">
                 {visibleEvents.map((event) => {
-                  const config = EVENT_TYPE_CONFIG[event.type]
+                  const config = getEventTypeConfig(event)
                   return (
                     <div
                       key={event.id}
                       className={cn(
-                        "w-full h-auto p-1 text-xs rounded cursor-pointer transition-all duration-150",
+                        "w-full h-auto p-1 text-xs rounded cursor-pointer transition-all duration-150 border",
                         config.bgColor,
                         config.color,
                       )}
+                      style={config.style}
                       onClick={(e) => {
                         e.stopPropagation()
                         onEventClick(event)
                       }}
                     >
-                      <span className="truncate">{event.title}</span>
+                      <span className="truncate">
+                        {!event.allDay && (
+                          <span className="text-xs opacity-75 mr-1">
+                            {new Date(event.startDate).toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true
+                            })}
+                          </span>
+                        )}
+                        {event.title}
+                      </span>
                     </div>
                   )
                 })}
@@ -126,31 +140,45 @@ export function MonthView({ currentDate, events, onEventClick, onDateClick }: Mo
                         </h4>
                         <div className="space-y-1 max-h-60 overflow-y-auto">
                           {dayEvents.map((event) => {
-                            const config = EVENT_TYPE_CONFIG[event.type]
+                            const config = getEventTypeConfig(event)
                             return (
                               <Button
                                 key={event.id}
                                 variant="ghost"
                                 size="sm"
                                 className={cn(
-                                  "w-full h-auto p-2 text-xs justify-start cursor-pointer",
+                                  "w-full h-auto p-2 text-xs justify-start cursor-pointer border",
                                   config.bgColor,
                                   config.color,
                                 )}
+                                style={config.style}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   onEventClick(event)
                                 }}
                               >
                                 <div className="flex flex-col items-start">
-                                  <span className="font-medium">{event.title}</span>
-                                  <span className="text-xs opacity-75">
-                                    {new Date(event.startDate).toLocaleTimeString("en-US", {
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                      hour12: true,
-                                    })}
+                                  <span className="font-medium">
+                                    {!event.allDay && (
+                                      <span className="text-xs opacity-75 mr-1">
+                                        {new Date(event.startDate).toLocaleTimeString("en-US", {
+                                          hour: "numeric",
+                                          minute: "2-digit",
+                                          hour12: true
+                                        })}
+                                      </span>
+                                    )}
+                                    {event.title}
                                   </span>
+                                  {!event.allDay && (
+                                    <span className="text-xs opacity-75">
+                                      {new Date(event.startDate).toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                        hour12: true,
+                                      })}
+                                    </span>
+                                  )}
                                 </div>
                               </Button>
                             )

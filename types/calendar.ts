@@ -1,4 +1,4 @@
-export type EventType = "commission" | "county" | "school-board" | "election"
+export type EventType = string // Dynamic from server
 
 export interface CalendarEvent {
   id: string

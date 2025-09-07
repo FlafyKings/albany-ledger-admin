@@ -1,6 +1,6 @@
 import { api } from './api-client'
 
-// API Response types matching the schema
+// API Response types matching the new schema
 export interface CalendarEventAPI {
   id: string
   title: string
@@ -8,12 +8,19 @@ export interface CalendarEventAPI {
   start_date: string // ISO 8601
   end_date: string | null // ISO 8601
   all_day: boolean
-  event_type: string
+  event_type_id: string
   location: string | null
   created_at: string
   updated_at: string
   created_by: string | null
   updated_by: string | null
+  event_types?: {
+    id: string
+    name: string
+    display_name: string
+    color_hex: string
+    created_at: string
+  }
 }
 
 export interface EventsListResponse {
@@ -50,7 +57,7 @@ export interface CreateEventRequest {
   start_date: string // ISO 8601
   end_date?: string // ISO 8601
   all_day?: boolean
-  event_type: 'commission' | 'county' | 'school-board' | 'election'
+  event_type_id: string // Event type ID instead of string
   location?: string
 }
 
@@ -60,7 +67,7 @@ export interface UpdateEventRequest {
   start_date?: string // ISO 8601
   end_date?: string // ISO 8601
   all_day?: boolean
-  event_type?: 'commission' | 'county' | 'school-board' | 'election'
+  event_type_id?: string // Event type ID instead of string
   location?: string
 }
 
@@ -70,14 +77,14 @@ export const calendarApi = {
   async getEvents(params?: {
     start_date?: string
     end_date?: string
-    event_type?: string
+    event_type_id?: string
     limit?: number
     offset?: number
   }) {
     const queryParams = new URLSearchParams()
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.event_type) queryParams.append('event_type', params.event_type)
+    if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id)
     if (params?.limit) queryParams.append('limit', params.limit.toString())
     if (params?.offset) queryParams.append('offset', params.offset.toString())
     
@@ -116,14 +123,14 @@ export const calendarApi = {
     format?: 'ics' | 'csv' | 'pdf'
     start_date?: string
     end_date?: string
-    event_types?: string[]
+    event_type_ids?: string[]
   }) {
     const queryParams = new URLSearchParams()
     if (params?.format) queryParams.append('format', params.format)
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.event_types) {
-      params.event_types.forEach(type => queryParams.append('event_types', type))
+    if (params?.event_type_ids) {
+      params.event_type_ids.forEach(typeId => queryParams.append('event_type_ids', typeId))
     }
     
     const query = queryParams.toString()
@@ -132,7 +139,7 @@ export const calendarApi = {
       format: string
       start_date: string | null
       end_date: string | null
-      event_types: string[]
+      event_type_ids: string[]
     }>(`/api/calendar/export${query ? `?${query}` : ''}`)
   },
 
@@ -174,14 +181,14 @@ export const calendarApi = {
   async getPublicEvents(params?: {
     start_date?: string
     end_date?: string
-    event_type?: string
+    event_type_id?: string
     limit?: number
     offset?: number
   }) {
     const queryParams = new URLSearchParams()
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.event_type) queryParams.append('event_type', params.event_type)
+    if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id)
     if (params?.limit) queryParams.append('limit', params.limit.toString())
     if (params?.offset) queryParams.append('offset', params.offset.toString())
     
@@ -206,6 +213,11 @@ export const calendarApi = {
 
 // Helper functions to convert between API and local format
 export function apiEventToLocal(apiEvent: CalendarEventAPI): import('@/types/calendar').CalendarEvent {
+  // Debug logging to understand the issue
+  if (!apiEvent.event_types) {
+    console.warn('Event missing event_types:', apiEvent.id, apiEvent.title, apiEvent)
+  }
+  
   return {
     id: apiEvent.id,
     title: apiEvent.title,
@@ -213,19 +225,19 @@ export function apiEventToLocal(apiEvent: CalendarEventAPI): import('@/types/cal
     startDate: new Date(apiEvent.start_date),
     endDate: new Date(apiEvent.end_date || apiEvent.start_date),
     allDay: apiEvent.all_day,
-    type: apiEvent.event_type as import('@/types/calendar').EventType,
+    type: apiEvent.event_types?.name || 'unknown' as import('@/types/calendar').EventType, // Use name from event_types object with fallback
     location: apiEvent.location || undefined,
   }
 }
 
-export function localEventToApi(localEvent: Omit<import('@/types/calendar').CalendarEvent, 'id'>): CreateEventRequest {
+export function localEventToApi(localEvent: Omit<import('@/types/calendar').CalendarEvent, 'id'>, eventTypeId: string): CreateEventRequest {
   return {
     title: localEvent.title,
     description: localEvent.description,
     start_date: localEvent.startDate.toISOString(),
     end_date: localEvent.endDate?.toISOString(),
     all_day: localEvent.allDay || false,
-    event_type: localEvent.type,
+    event_type_id: eventTypeId, // Use event type ID instead of string
     location: localEvent.location,
   }
 } 
