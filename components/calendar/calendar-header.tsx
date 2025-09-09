@@ -2,7 +2,7 @@
 
 import type { CalendarView } from "@/types/calendar"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Download, RefreshCw } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download } from "lucide-react"
 
 interface CalendarHeaderProps {
   currentDate: Date
@@ -10,11 +10,10 @@ interface CalendarHeaderProps {
   onViewChange: (view: CalendarView) => void
   onDateChange: (date: Date) => void
   onExport: () => void
-  onRefresh?: () => void
-  isRefreshing?: boolean
+  isExporting?: boolean
 }
 
-export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, onExport, onRefresh, isRefreshing = false }: CalendarHeaderProps) {
+export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, onExport, isExporting = false }: CalendarHeaderProps) {
   const goToPrevious = () => {
     const newDate = new Date(currentDate)
     if (view === "month") {
@@ -35,9 +34,6 @@ export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, 
     onDateChange(newDate)
   }
 
-  const goToToday = () => {
-    onDateChange(new Date())
-  }
 
   const formatHeaderDate = () => {
     if (view === "month") {
@@ -78,10 +74,6 @@ export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, 
         </div>
 
         <h2 className="text-xl font-semibold text-balance text-[#5e6461]">{formatHeaderDate()}</h2>
-
-        <Button variant="outline" size="sm" onClick={goToToday} className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]">
-          Today
-        </Button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -112,22 +104,16 @@ export function CalendarHeader({ currentDate, view, onViewChange, onDateChange, 
           </Button>
         </div>
 
-        {onRefresh && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        )}
         
-        <Button variant="outline" size="sm" onClick={onExport} className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]"
+          onClick={onExport}
+          disabled={isExporting}
+        >
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {isExporting ? "Exporting..." : "Export"}
         </Button>
       </div>
     </div>

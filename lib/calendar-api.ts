@@ -1,4 +1,16 @@
-import { api } from './api-client'
+import { api, apiCall } from './api-client'
+import { createClient } from './supabase'
+
+// Get auth token from Supabase session
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || null
+  } catch (error) {
+    return null
+  }
+}
 
 // API Response types matching the new schema
 export interface CalendarEventAPI {
@@ -124,16 +136,57 @@ export const calendarApi = {
     start_date?: string
     end_date?: string
     event_type_ids?: string[]
+    calendar_name?: string
   }) {
     const queryParams = new URLSearchParams()
     if (params?.format) queryParams.append('format', params.format)
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
+    if (params?.calendar_name) queryParams.append('calendar_name', params.calendar_name)
     if (params?.event_type_ids) {
       params.event_type_ids.forEach(typeId => queryParams.append('event_type_ids', typeId))
     }
     
     const query = queryParams.toString()
+    
+    // For ICS format, we expect raw text content, not JSON
+    if (params?.format === 'ics') {
+      try {
+        const token = await getAuthToken()
+        if (!token) {
+          throw new Error('Not authenticated')
+        }
+
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://albany-ledger-ac0ae29a7839.herokuapp.com'
+        const response = await fetch(`${API_BASE}/api/calendar/export${query ? `?${query}` : ''}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'text/calendar, text/plain, */*',
+          },
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
+        }
+        
+        const icsContent = await response.text()
+        return {
+          success: true,
+          data: icsContent,
+          error: null
+        }
+      } catch (error) {
+        return {
+          success: false,
+          data: null,
+          error: error instanceof Error ? error.message : 'Export failed'
+        }
+      }
+    }
+    
+    // For other formats, use the regular API client
     return api.get<{
       message: string
       format: string

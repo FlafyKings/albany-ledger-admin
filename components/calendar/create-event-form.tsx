@@ -199,7 +199,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mx-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* General form errors */}
       {getFieldError("general") && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
@@ -207,13 +207,13 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
         </div>
       )}
       <div className="space-y-2">
-        <Label htmlFor="title">Event Title *</Label>
+        <Label htmlFor="title" className="text-[#5e6461] font-medium">Event Title *</Label>
         <Input
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter event title"
-          className={hasFieldError("title") ? "border-red-500 focus:border-red-500" : ""}
+          className={`border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("title") ? "border-red-500 focus:border-red-500" : ""}`}
         />
         {getFieldError("title") && (
           <p className="text-sm text-red-600">{getFieldError("title")}</p>
@@ -221,9 +221,9 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="type">Event Type</Label>
+        <Label htmlFor="type" className="text-[#5e6461] font-medium">Event Type</Label>
         <Select value={type} onValueChange={(value: EventType) => setType(value)}>
-          <SelectTrigger className={`cursor-pointer ${hasFieldError("type") ? "border-red-500 focus:border-red-500" : ""}`}>
+          <SelectTrigger className={`cursor-pointer border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("type") ? "border-red-500 focus:border-red-500" : ""}`}>
             <SelectValue placeholder={Object.keys(eventTypeConfig).length === 0 ? "Loading event types..." : "Select event type"} />
           </SelectTrigger>
           <SelectContent>
@@ -251,9 +251,9 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
           id="allDay"
           checked={allDay}
           onCheckedChange={(checked) => handleAllDayChange(checked as boolean)}
-          className="cursor-pointer"
+          className="cursor-pointer border-[#5e6461]/20 data-[state=checked]:bg-[#d36530] data-[state=checked]:border-[#d36530]"
         />
-        <Label htmlFor="allDay" className="cursor-pointer">
+        <Label htmlFor="allDay" className="cursor-pointer text-[#5e6461] font-medium">
           All day event
         </Label>
       </div>
@@ -264,13 +264,13 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
           /* All Day Event - Two Date Inputs */
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Start Date *</Label>
+              <Label className="text-[#5e6461] font-medium">Start Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal cursor-pointer",
+                      "w-full justify-start text-left font-normal cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]",
                       !startDate && "text-muted-foreground",
                       hasFieldError("startDate") && "border-red-500 focus:border-red-500",
                     )}
@@ -289,13 +289,13 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
             </div>
             
             <div className="space-y-2">
-              <Label>End Date *</Label>
+              <Label className="text-[#5e6461] font-medium">End Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal cursor-pointer",
+                      "w-full justify-start text-left font-normal cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]",
                       !endDate && "text-muted-foreground",
                       hasFieldError("endDate") && "border-red-500 focus:border-red-500",
                     )}
@@ -317,13 +317,13 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
           /* Timed Event - One Date + Two Time Inputs */
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Date *</Label>
+              <Label className="text-[#5e6461] font-medium">Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal cursor-pointer",
+                      "w-full justify-start text-left font-normal cursor-pointer border-[#5e6461]/20 hover:border-[#d36530] hover:bg-[#d36530]/10 text-[#5e6461]",
                       !startDate && "text-muted-foreground",
                       hasFieldError("startDate") && "border-red-500 focus:border-red-500",
                     )}
@@ -343,24 +343,24 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Start Time *</Label>
+                <Label className="text-[#5e6461] font-medium">Start Time *</Label>
                 <Input
                   type="time"
                   value={startTime}
                   onChange={(e) => handleStartTimeChange(e.target.value)}
-                  className={`cursor-pointer ${hasFieldError("startTime") ? "border-red-500 focus:border-red-500" : ""}`}
+                  className={`cursor-pointer border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("startTime") ? "border-red-500 focus:border-red-500" : ""}`}
                 />
                 {getFieldError("startTime") && (
                   <p className="text-sm text-red-600">{getFieldError("startTime")}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>End Time *</Label>
+                <Label className="text-[#5e6461] font-medium">End Time *</Label>
                 <Input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className={`cursor-pointer ${hasFieldError("endTime") ? "border-red-500 focus:border-red-500" : ""}`}
+                  className={`cursor-pointer border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("endTime") ? "border-red-500 focus:border-red-500" : ""}`}
                 />
                 {getFieldError("endTime") && (
                   <p className="text-sm text-red-600">{getFieldError("endTime")}</p>
@@ -372,13 +372,13 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="location" className="text-[#5e6461] font-medium">Location</Label>
         <Input
           id="location"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Enter event location"
-          className={hasFieldError("location") ? "border-red-500 focus:border-red-500" : ""}
+          className={`border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("location") ? "border-red-500 focus:border-red-500" : ""}`}
         />
         {getFieldError("location") && (
           <p className="text-sm text-red-600">{getFieldError("location")}</p>
@@ -386,14 +386,14 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description" className="text-[#5e6461] font-medium">Description</Label>
         <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter event description"
           rows={3}
-          className={hasFieldError("description") ? "border-red-500 focus:border-red-500" : ""}
+          className={`border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("description") ? "border-red-500 focus:border-red-500" : ""}`}
         />
         {getFieldError("description") && (
           <p className="text-sm text-red-600">{getFieldError("description")}</p>
@@ -402,7 +402,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
 
       <Button 
         type="submit" 
-        className="w-full cursor-pointer" 
+        className="w-full cursor-pointer bg-[#d36530] hover:bg-[#d36530]/90 text-white" 
         disabled={isLoading || Object.keys(eventTypeConfig).length === 0}
       >
         {isLoading ? (

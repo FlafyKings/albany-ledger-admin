@@ -28,10 +28,10 @@ import {
   Newspaper,
   PhoneCall,
   AlertCircle,
+  Send,
   Cloud,
   Car,
   Info,
-  Send,
   Globe,
   Smartphone,
   AtSign,
@@ -331,10 +331,17 @@ export default function ContentManagement() {
   }
 
   const createBreakingNewsAlert = async () => {
+    setCreatingAlert(true)
+    
     try {
       const response = await breakingNewsApi.create(newAlertData)
       if (response.success && response.data) {
-        setBreakingNewsAlerts([...breakingNewsAlerts, response.data])
+        // Handle both old format (just alert) and new format (alert + send info)
+        const alert = response.data.alert || response.data
+        const sentCount = response.data.sent_count
+        const message = response.data.message
+        
+        setBreakingNewsAlerts([...breakingNewsAlerts, alert])
         setShowAlertDialog(false)
         setNewAlertData({
           title: '',
@@ -347,10 +354,19 @@ export default function ContentManagement() {
           channels: [],
           author: ''
         })
-        toast({
-          title: "Alert Created",
-          description: "Breaking news alert has been created successfully.",
-        })
+        
+        // Show success message with send count if available
+        if (sentCount !== undefined) {
+          toast({
+            title: "Alert Created & Sent! 🎉",
+            description: message || `Alert sent to ${sentCount} recipients via selected channels.`,
+          })
+        } else {
+          toast({
+            title: "Alert Created",
+            description: "Breaking news alert has been created successfully.",
+          })
+        }
       } else {
         toast({
           variant: "destructive",
@@ -365,6 +381,48 @@ export default function ContentManagement() {
         description: 'Failed to create breaking news alert',
       })
       console.error('Error creating breaking news alert:', error)
+    } finally {
+      setCreatingAlert(false)
+    }
+  }
+
+  const [sendingAlerts, setSendingAlerts] = useState<Set<number>>(new Set())
+  const [creatingAlert, setCreatingAlert] = useState(false)
+
+  const sendBreakingNewsAlert = async (alertId: number) => {
+    // Add to sending set
+    setSendingAlerts(prev => new Set(prev).add(alertId))
+    
+    try {
+      const response = await breakingNewsApi.send(alertId)
+      if (response.success) {
+        toast({
+          title: "Alert Sent Successfully! 🎉",
+          description: `Alert sent to ${response.data?.recipients || 0} recipients via selected channels.`,
+        })
+        // Refresh the alerts list
+        loadBreakingNewsAlerts()
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Send Alert",
+          description: response.error || 'Failed to send alert. Please try again.',
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Network Error",
+        description: 'Failed to send alert. Please check your connection and try again.',
+      })
+      console.error('Error sending breaking news alert:', error)
+    } finally {
+      // Remove from sending set
+      setSendingAlerts(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(alertId)
+        return newSet
+      })
     }
   }
 
@@ -838,12 +896,17 @@ export default function ContentManagement() {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Create Breaking News Alert</DialogTitle>
+                        <DialogTitle>
+                          {creatingAlert ? "Creating & Sending Alert..." : "Create Breaking News Alert"}
+                        </DialogTitle>
                         <DialogDescription>
-                          Create a new emergency alert or breaking news notification
+                          {creatingAlert 
+                            ? "Please wait while we create and send your alert to all subscribers..."
+                            : "Create a new emergency alert or breaking news notification"
+                          }
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
+                      <div className={`space-y-4 ${creatingAlert ? 'opacity-50 pointer-events-none' : ''}`}>
                         <div className="space-y-2">
                           <Label htmlFor="alert-title">Alert Title</Label>
                           <Input 
@@ -851,6 +914,7 @@ export default function ContentManagement() {
                             placeholder="Brief, descriptive title"
                             value={newAlertData.title}
                             onChange={(e) => setNewAlertData({...newAlertData, title: e.target.value})}
+                            disabled={creatingAlert}
                           />
                         </div>
                         <div className="space-y-2">
@@ -861,6 +925,7 @@ export default function ContentManagement() {
                             rows={4}
                             value={newAlertData.content}
                             onChange={(e) => setNewAlertData({...newAlertData, content: e.target.value})}
+                            disabled={creatingAlert}
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -983,15 +1048,29 @@ export default function ContentManagement() {
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowAlertDialog(false)}>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowAlertDialog(false)}
+                          disabled={creatingAlert}
+                        >
                           Cancel
                         </Button>
                         <Button 
                           className="bg-[#d36530] hover:bg-[#d36530]/90"
                           onClick={createBreakingNewsAlert}
+                          disabled={creatingAlert}
                         >
-                          <Send className="h-4 w-4 mr-2" />
-                          Create Alert
+                          {creatingAlert ? (
+                            <>
+                              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              Creating & Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-2" />
+                              Create & Send Alert
+                            </>
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -1032,6 +1111,12 @@ export default function ContentManagement() {
                               <div className="flex items-center gap-3 mb-2">
                                 {getTypeIcon(alert.type)}
                                 <h3 className="font-semibold text-[#5e6461]">{alert.title}</h3>
+                                {sendingAlerts.has(alert.id) && (
+                                  <div className="flex items-center gap-1 text-xs text-blue-600">
+                                    <div className="h-3 w-3 animate-spin rounded-full border border-blue-300 border-t-blue-600" />
+                                    Resending...
+                                  </div>
+                                )}
                                 <Badge className={getPriorityColor(alert.priority)}>{alert.priority}</Badge>
                                 <Badge className={getStatusColor(alert.status)}>{alert.status}</Badge>
                               </div>
@@ -1064,6 +1149,23 @@ export default function ContentManagement() {
                                 <DropdownMenuItem onClick={() => setSelectedAlert(alert)}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => sendBreakingNewsAlert(alert.id)}
+                                  disabled={sendingAlerts.has(alert.id)}
+                                  className={sendingAlerts.has(alert.id) ? "opacity-50 cursor-not-allowed" : ""}
+                                >
+                                  {sendingAlerts.has(alert.id) ? (
+                                    <>
+                                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                                      Resending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send className="h-4 w-4 mr-2" />
+                                      Resend Alert
+                                    </>
+                                  )}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
                                   <Edit className="h-4 w-4 mr-2" />

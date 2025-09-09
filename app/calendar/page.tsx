@@ -10,7 +10,6 @@ import { EventTypesManager } from "@/components/calendar/event-types-manager"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { calendarApi, apiEventToLocal, localEventToApi, type EventTypeAPI } from "@/lib/calendar-api"
-import { downloadICS } from "@/lib/calendar-utils"
 import type { CalendarEvent } from "@/types/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarSkeleton } from "@/components/calendar/calendar-skeleton"
@@ -26,6 +25,7 @@ export default function CalendarPage() {
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const { toast } = useToast()
 
   // Client-side detection to prevent hydration mismatches
@@ -201,31 +201,43 @@ export default function CalendarPage() {
     setIsCreateFormOpen(true)
   }
 
-  const handleExport = async () => {
+  const handleExportRequest = async () => {
+    setIsExporting(true)
     try {
-      // Try to use the API export first
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
-      
+      // Use backend export endpoint
       const response = await calendarApi.exportCalendar({
         format: 'ics',
-        start_date: startOfMonth.toISOString(),
-        end_date: endOfMonth.toISOString(),
-        event_type_ids: [], // Export all event types
+        calendar_name: 'Albany Ledger Calendar'
       })
       
-      if (response.success) {
+      if (response.success && response.data) {
+        // Create blob and download
+        const blob = new Blob([response.data], { type: 'text/calendar; charset=utf-8' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `calendar-${new Date().toISOString().split('T')[0]}.ics`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
         toast({
-          title: "Export",
-          description: response.data?.message || "Export functionality is being prepared.",
+          title: "Export Successful",
+          description: "Calendar exported as ICS file successfully!",
         })
       } else {
-        // Fallback to local export
-        downloadICS(events, "calendar-events.ics")
+        throw new Error(response.error || 'Export failed')
       }
     } catch (error) {
-      // Fallback to local export on error
-      downloadICS(events, "calendar-events.ics")
+      console.error('Export error:', error)
+      toast({
+        title: "Export Error",
+        description: "Failed to export calendar as ICS. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -267,8 +279,8 @@ export default function CalendarPage() {
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-md overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>Create New Event</SheetTitle>
-                <SheetDescription>Add a new event to the calendar. Fill in the details below.</SheetDescription>
+                <SheetTitle className="text-[#5e6461]">Create New Event</SheetTitle>
+                <SheetDescription className="text-[#5e6461]/70">Add a new event to the calendar. Fill in the details below.</SheetDescription>
               </SheetHeader>
               <div className="mt-6">
                 <CreateEventForm 
@@ -285,8 +297,8 @@ export default function CalendarPage() {
           <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
             <SheetContent className="w-full sm:max-w-md overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>Edit Event</SheetTitle>
-                <SheetDescription>Update the event details below.</SheetDescription>
+                <SheetTitle className="text-[#5e6461]">Edit Event</SheetTitle>
+                <SheetDescription className="text-[#5e6461]/70">Update the event details below.</SheetDescription>
               </SheetHeader>
               <div className="mt-6">
                 {editingEvent && (
@@ -331,10 +343,9 @@ export default function CalendarPage() {
                 eventTypes={eventTypes}
                 onDateClick={handleDateClick}
                 onEventEdit={handleEventEdit}
-                onExport={handleExport}
-                onRefresh={handleRefresh}
+                onExport={handleExportRequest}
                 isLoading={false}
-                isRefreshing={isLoading}
+                isExporting={isExporting}
               />
             )}
           </TabsContent>

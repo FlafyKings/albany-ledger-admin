@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { BreakingNewsAlert } from "@/lib/content-api"
 import {
   Calendar,
   FileText,
@@ -54,6 +55,29 @@ const sidebarItems = [
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("Dashboard")
+  const [activeBreakingNews, setActiveBreakingNews] = useState<BreakingNewsAlert | null>(null)
+  const [isLoadingBreakingNews, setIsLoadingBreakingNews] = useState(true)
+
+  // Fetch active breaking news on component mount
+  useEffect(() => {
+    const fetchActiveBreakingNews = async () => {
+      try {
+        setIsLoadingBreakingNews(true)
+        const response = await fetch('/api/public/breaking-news/active')
+        if (response.ok) {
+          const alerts = await response.json()
+          // Since we ensure only one active alert, take the first one
+          setActiveBreakingNews(alerts.length > 0 ? alerts[0] : null)
+        }
+      } catch (error) {
+        console.error('Error fetching active breaking news:', error)
+      } finally {
+        setIsLoadingBreakingNews(false)
+      }
+    }
+
+    fetchActiveBreakingNews()
+  }, [])
 
   return (
     <div className="flex-1 flex flex-col">
@@ -137,30 +161,57 @@ export default function AdminDashboard() {
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                       <CardTitle className="text-[#5e6461]">Breaking News</CardTitle>
-                      <CardDescription>Manage urgent announcements</CardDescription>
+                      <CardDescription>Current active announcement</CardDescription>
                     </div>
-                    <Button size="sm" className="bg-[#d36530] hover:bg-[#d36530]/90">
+                    <Button 
+                      size="sm" 
+                      className="bg-[#d36530] hover:bg-[#d36530]/90"
+                      onClick={() => window.location.href = '/content'}
+                    >
                       <Plus className="h-4 w-4 mr-2" />
-                      Add News
+                      Manage Alerts
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                        <div>
-                          <p className="font-medium text-[#5e6461]">Water Main Break - Downtown</p>
-                          <p className="text-sm text-[#5e6461]/70">Expires: Today 6PM</p>
-                        </div>
-                        <Badge variant="destructive">Urgent</Badge>
+                    {isLoadingBreakingNews ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-[#d36530]" />
+                        <span className="ml-2 text-[#5e6461]/60">Loading...</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div>
-                          <p className="font-medium text-[#5e6461]">Road Closure - Main St</p>
-                          <p className="text-sm text-[#5e6461]/70">Expires: Tomorrow 8AM</p>
+                    ) : activeBreakingNews ? (
+                      <div className="space-y-3">
+                        <div className={`flex items-center justify-between p-3 rounded-lg border ${
+                          activeBreakingNews.priority === 'Critical' ? 'bg-red-50 border-red-200' :
+                          activeBreakingNews.priority === 'High' ? 'bg-orange-50 border-orange-200' :
+                          activeBreakingNews.priority === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
+                          'bg-green-50 border-green-200'
+                        }`}>
+                          <div>
+                            <p className="font-medium text-[#5e6461]">{activeBreakingNews.title}</p>
+                            <p className="text-sm text-[#5e6461]/70">
+                              {activeBreakingNews.expiration_date 
+                                ? `Expires: ${new Date(activeBreakingNews.expiration_date).toLocaleDateString()}`
+                                : 'No expiration set'
+                              }
+                            </p>
+                          </div>
+                          <Badge className={
+                            activeBreakingNews.priority === 'Critical' ? 'bg-red-100 text-red-800' :
+                            activeBreakingNews.priority === 'High' ? 'bg-orange-100 text-orange-800' :
+                            activeBreakingNews.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }>
+                            {activeBreakingNews.priority}
+                          </Badge>
                         </div>
-                        <Badge variant="secondary">Important</Badge>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-8 text-[#5e6461]/60">
+                        <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No active breaking news alert</p>
+                        <p className="text-sm">Create one to display on the website and mobile app</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

@@ -16,17 +16,24 @@ interface CalendarProps {
   onDateClick?: (date: Date) => void
   onEventEdit?: (event: CalendarEvent) => void
   onExport?: () => void
-  onRefresh?: () => void
   isLoading?: boolean
-  isRefreshing?: boolean
+  isExporting?: boolean
 }
 
-export function Calendar({ events, eventTypes, onDateClick, onEventEdit, onExport, onRefresh, isLoading = false, isRefreshing = false }: CalendarProps) {
+export function Calendar({ events, eventTypes, onDateClick, onEventEdit, onExport, isLoading = false, isExporting = false }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [view, setView] = useState<CalendarView>("month")
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+
+  // Initialize selectedEventTypes with all available event types when they load
+  useEffect(() => {
+    if (eventTypes.length > 0 && selectedEventTypes.length === 0) {
+      const allEventTypes = eventTypes.map(et => et.name) as EventType[]
+      setSelectedEventTypes(allEventTypes)
+    }
+  }, [eventTypes, selectedEventTypes.length])
 
   // Create dynamic event type configuration from API data
   const eventTypeConfig = useMemo(() => {
@@ -71,6 +78,10 @@ export function Calendar({ events, eventTypes, onDateClick, onEventEdit, onExpor
 
 
   const filteredEvents = useMemo(() => {
+    // If no event types are selected, show all events
+    if (selectedEventTypes.length === 0) {
+      return events
+    }
     return events.filter((event) => selectedEventTypes.includes(event.type))
   }, [events, selectedEventTypes])
 
@@ -102,15 +113,14 @@ export function Calendar({ events, eventTypes, onDateClick, onEventEdit, onExpor
   }
 
   return (
-    <div className="space-y-6 bg-white rounded-lg shadow-sm p-6">
+    <div id="calendar-container" className="space-y-6 bg-white rounded-lg shadow-sm p-6">
       <CalendarHeader
         currentDate={currentDate}
         view={view}
         onViewChange={setView}
         onDateChange={handleDateChange}
         onExport={onExport || (() => {})}
-        onRefresh={onRefresh || (() => {})}
-        isRefreshing={isRefreshing}
+        isExporting={isExporting}
       />
 
       <EventFilters

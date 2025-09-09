@@ -128,22 +128,22 @@ export const breakingNewsApi = {
     if (params?.priority) searchParams.append('priority', params.priority)
     if (params?.status) searchParams.append('status', params.status)
     const query = searchParams.toString()
-    return api.get<BreakingNewsAlert[]>(`/api/breaking-news${query ? '?' + query : ''}`)
+    return api.get<BreakingNewsAlert[]>(`/newsletter/admin/alerts${query ? '?' + query : ''}`)
   },
 
   // Get specific breaking news alert
-  get: (id: number) => api.get<BreakingNewsAlert>(`/api/breaking-news/${id}`),
+  get: (id: number) => api.get<BreakingNewsAlert>(`/newsletter/admin/alerts/${id}`),
 
   // Create new breaking news alert
   create: (data: CreateBreakingNewsData) => 
-    api.post<BreakingNewsAlert>('/api/breaking-news', data),
+    api.post<BreakingNewsAlert>('/newsletter/admin/alerts', data),
 
   // Update breaking news alert
   update: (id: number, data: Partial<CreateBreakingNewsData>) => 
-    api.put<BreakingNewsAlert>(`/api/breaking-news/${id}`, data),
+    api.patch<BreakingNewsAlert>(`/newsletter/admin/alerts/${id}`, data),
 
   // Delete breaking news alert
-  delete: (id: number) => api.delete(`/api/breaking-news/${id}`),
+  delete: (id: number) => api.delete(`/newsletter/admin/alerts/${id}`),
 
   // Increment view count
   incrementViews: (id: number) => api.post(`/api/breaking-news/${id}/view`, {}),
@@ -156,6 +156,9 @@ export const breakingNewsApi = {
 
   // Duplicate breaking news alert
   duplicate: (id: number) => api.post<BreakingNewsAlert>(`/api/breaking-news/${id}/duplicate`, {}),
+
+  // Send alert to subscribers
+  send: (id: number) => api.post(`/newsletter/admin/alerts/${id}/send`, {}),
 }
 
 // ==================== ARTICLES API ====================
