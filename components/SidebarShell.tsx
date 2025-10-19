@@ -26,10 +26,8 @@ export default function SidebarShell({ children }: PropsWithChildren) {
         if (session?.user) {
           // Get role from user metadata
           const role = session.user.user_metadata?.role || 'official'
-          console.log('SidebarShell: userRole from metadata =', role) // Debug log
           setUserRole(role)
         } else {
-          console.log('SidebarShell: No session found') // Debug log
           setUserRole(null)
         }
       } catch (error) {
@@ -43,16 +41,16 @@ export default function SidebarShell({ children }: PropsWithChildren) {
     checkUserRole()
   }, [])
 
-  // Hide sidebar for login, registration, and non-admin users
+  // Hide sidebar for login, registration, privacy, and non-admin users
   const hideSidebar = pathname === "/login" || 
                      pathname === "/official-registration" || 
+                     pathname === "/privacy" ||
                      (userRole !== 'admin') // Hide for any role that's not admin
 
   if (isLoading) {
     return <div className="min-h-screen bg-[#f2f0e3]">{children}</div>
   }
 
-  console.log('SidebarShell: hideSidebar =', hideSidebar, 'pathname =', pathname, 'userRole =', userRole) // Debug log
   
   if (hideSidebar) {
     return <div className="min-h-screen bg-[#f2f0e3]">{children}</div>

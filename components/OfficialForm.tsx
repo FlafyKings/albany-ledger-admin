@@ -71,7 +71,7 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
           addressLine1: "",
           addressLine2: "",
           city: "",
-          state: "NY",
+          state: "GA", // Fix state to GA for Albany, Georgia
           zip: "",
           room: "",
           hours: "",
@@ -80,6 +80,7 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
       biography: "",
       district: "Citywide",
       party: "Democrat",
+      ward: "", // Add ward field
       officeAddress: "",
       officeHours: "",
       status: "active",
@@ -277,7 +278,6 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
             return
           }
         } catch (error) {
-          console.log('No existing official found with this email, proceeding with account creation')
         }
 
         // Show verification steps
@@ -319,6 +319,7 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
           roleTitle: data.roleTitle,
           termStart: data.termStart,
           termEnd: data.termEnd,
+          ward: data.ward || undefined, // Add ward field
           contact: {
             email: data.contact.email,
             phone: data.contact.phone,
@@ -375,6 +376,7 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
           roleTitle: data.roleTitle,
           termStart: data.termStart,
           termEnd: data.termEnd,
+          ward: data.ward || undefined, // Add ward field
           contact: {
             email: data.contact.email,
             phone: data.contact.phone,
@@ -411,6 +413,7 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
           roleTitle: data.roleTitle,
           termStart: data.termStart,
           termEnd: data.termEnd,
+          ward: data.ward || undefined, // Add ward field
           contact: {
             email: data.contact.email,
             phone: data.contact.phone,
@@ -795,6 +798,29 @@ export default function OfficialForm({ mode, officialId }: OfficialFormProps) {
                   {...form.register("party")}
                   placeholder="e.g., Democrat, Republican" 
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ward">Ward</Label>
+                <Select 
+                  value={form.watch("ward") || "none"} 
+                  onValueChange={(val) => form.setValue("ward", val === "none" ? "" : val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ward (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No ward</SelectItem>
+                    <SelectItem value="Ward 1">Ward 1</SelectItem>
+                    <SelectItem value="Ward 2">Ward 2</SelectItem>
+                    <SelectItem value="Ward 3">Ward 3</SelectItem>
+                    <SelectItem value="Ward 4">Ward 4</SelectItem>
+                    <SelectItem value="Ward 5">Ward 5</SelectItem>
+                    <SelectItem value="Ward 6">Ward 6</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.ward && (
+                  <p className="text-sm text-red-500">{form.formState.errors.ward.message}</p>
+                )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="hours">Office Hours</Label>

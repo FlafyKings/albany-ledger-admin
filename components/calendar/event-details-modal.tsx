@@ -131,6 +131,16 @@ export function EventDetailsModal({ event, eventTypeConfig, isOpen, onClose, onE
               </div>
             )}
 
+            {event.ward && (
+              <div className="flex items-start gap-3">
+                <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Ward</p>
+                  <p className="text-sm text-muted-foreground">{event.ward}</p>
+                </div>
+              </div>
+            )}
+
             {event.description && (
               <div className="flex items-start gap-3">
                 <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />

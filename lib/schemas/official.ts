@@ -54,6 +54,7 @@ export const officialFormSchema = z.object({
   biography: z.string().optional(),
   district: z.string().optional(),
   party: z.string().optional(),
+  ward: z.string().optional(), // Add ward field
   officeAddress: z.string().optional(),
   officeHours: z.string().optional(),
   status: z.string().optional(),

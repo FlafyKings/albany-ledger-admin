@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Users, Calendar, FileText, AlertTriangle, MessageSquare, Mail, MapPin, Vote, BarChart3, Shield, Settings } from "lucide-react"
+import { Home, Users, Calendar, FileText, AlertTriangle, MessageSquare, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navigation = [
@@ -14,11 +14,6 @@ const navigation = [
   { label: "Issue Reports", href: "/issues", icon: AlertTriangle },
   { label: "Q&A", href: "/questions", icon: MessageSquare },
   { label: "Newsletter", href: "/newsletter", icon: Mail },
-  { label: "Wards & Districts", href: "/wards", icon: MapPin },
-  { label: "Elections", href: "/elections", icon: Vote },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "User Management", href: "/users", icon: Shield },
-  { label: "System Config", href: "/settings", icon: Settings },
 ]
 
 export function Sidebar() {

@@ -21,9 +21,10 @@ interface HeaderProps {
   title: string
   subtitle?: string
   searchPlaceholder?: string
+  showSearch?: boolean
 }
 
-export function Header({ title, subtitle, searchPlaceholder = "Search..." }: HeaderProps) {
+export function Header({ title, subtitle, searchPlaceholder = "Search...", showSearch = false }: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -54,13 +55,15 @@ export function Header({ title, subtitle, searchPlaceholder = "Search..." }: Hea
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
-            <Input
-              placeholder={searchPlaceholder}
-              className="pl-10 w-64 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
-            />
-          </div>
+          {showSearch && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
+              <Input
+                placeholder={searchPlaceholder}
+                className="pl-10 w-64 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
+              />
+            </div>
+          )}
 
           <Button variant="outline" size="icon" className="relative bg-transparent">
             <Bell className="h-4 w-4" />

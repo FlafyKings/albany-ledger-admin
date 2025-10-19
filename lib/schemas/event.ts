@@ -22,6 +22,12 @@ export const eventFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   
+  ward: z
+    .string()
+    .max(50, "Ward must be less than 50 characters")
+    .optional()
+    .or(z.literal("")),
+  
   allDay: z.boolean(),
   
   startDate: z

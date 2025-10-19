@@ -1,41 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
-  Calendar,
-  FileText,
-  Home,
-  MessageSquare,
-  Settings,
-  Users,
-  AlertTriangle,
-  Mail,
-  BarChart3,
-  MapPin,
-  Vote,
-  Shield,
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   Eye,
-  Edit,
   Trash2,
-  Clock,
-  User,
   CheckCircle,
   XCircle,
   AlertCircle,
-  Wrench,
-  Car,
-  TreePine,
-  Lightbulb,
-  Building,
+  MapPin,
   Send,
-  MapPinIcon,
+  MessageSquare,
+  Building,
+  RefreshCw,
+  Download,
+  Clock,
 } from "lucide-react"
-import Link from "next/link"
-// Sidebar is provided globally by the layout
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,310 +45,509 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { Header } from "@/components/Header"
 
-const sidebarItems = [
-  { icon: Home, label: "Dashboard", href: "/" },
-  { icon: FileText, label: "Home Screen", href: "/home-screen" },
-  { icon: Users, label: "Officials", href: "/officials" },
-  { icon: Calendar, label: "Calendar", href: "/calendar" },
-  { icon: FileText, label: "Documents", href: "/documents" },
-  { icon: AlertTriangle, label: "Issue Reports", href: "/issues", active: true },
-  { icon: MessageSquare, label: "Q&A", href: "/questions" },
-  { icon: Mail, label: "Newsletter", href: "/newsletter" },
-  { icon: MapPin, label: "Wards & Districts", href: "/wards" },
-  { icon: Vote, label: "Elections", href: "/elections" },
-  { icon: BarChart3, label: "Analytics", href: "/analytics" },
-  { icon: Shield, label: "User Management", href: "/users" },
-  { icon: Settings, label: "System Config", href: "/settings" },
-]
-
-const issueCategories = [
-  {
-    id: 1,
-    name: "Road & Infrastructure",
-    description: "Potholes, road damage, sidewalk issues",
-    icon: "Car",
-    department: "Public Works",
-    priority: "High",
-    color: "#dc2626",
-    issueCount: 45,
-    avgResolutionDays: 7,
-  },
-  {
-    id: 2,
-    name: "Street Lighting",
-    description: "Broken streetlights, dark areas",
-    icon: "Lightbulb",
-    department: "Utilities",
-    priority: "Medium",
-    color: "#f59e0b",
-    issueCount: 23,
-    avgResolutionDays: 3,
-  },
-  {
-    id: 3,
-    name: "Parks & Recreation",
-    description: "Park maintenance, playground issues",
-    icon: "TreePine",
-    department: "Parks & Recreation",
-    priority: "Low",
-    color: "#059669",
-    issueCount: 18,
-    avgResolutionDays: 14,
-  },
-  {
-    id: 4,
-    name: "Building & Code",
-    description: "Building violations, code enforcement",
-    icon: "Building",
-    department: "Code Enforcement",
-    priority: "High",
-    color: "#7c3aed",
-    issueCount: 31,
-    avgResolutionDays: 21,
-  },
-  {
-    id: 5,
-    name: "Public Safety",
-    description: "Safety hazards, emergency issues",
-    icon: "AlertTriangle",
-    department: "Public Safety",
-    priority: "Critical",
-    color: "#dc2626",
-    issueCount: 12,
-    avgResolutionDays: 1,
-  },
-]
-
-const issueReports = [
-  {
-    id: "ISS-2024-001",
-    title: "Large pothole on Oak Street",
-    category: "Road & Infrastructure",
-    categoryColor: "#dc2626",
-    status: "In Progress",
-    priority: "High",
-    reporter: {
-      name: "John Smith",
-      email: "john.smith@email.com",
-      phone: "(518) 555-0123",
-      anonymous: false,
-    },
-    location: {
-      address: "Oak Street & 3rd Avenue",
-      coordinates: "42.6803, -73.8370",
-      ward: "Ward 2",
-    },
-    department: "Public Works",
-    assignedTo: "Mike Johnson",
-    submittedDate: "2024-03-15T10:30:00",
-    estimatedCompletion: "2024-03-22",
-    description: "Large pothole causing vehicle damage. Approximately 3 feet wide and 6 inches deep.",
-    photos: ["/placeholder.svg?height=100&width=100"],
-    updates: 3,
-    lastUpdate: "2024-03-18T14:20:00",
-  },
-  {
-    id: "ISS-2024-002",
-    title: "Broken streetlight on Main Street",
-    category: "Street Lighting",
-    categoryColor: "#f59e0b",
-    status: "Pending",
-    priority: "Medium",
-    reporter: {
-      name: "Anonymous",
-      email: "anonymous@system.local",
-      phone: "",
-      anonymous: true,
-    },
-    location: {
-      address: "Main Street near City Hall",
-      coordinates: "42.6823, -73.8390",
-      ward: "Ward 1",
-    },
-    department: "Utilities",
-    assignedTo: "Sarah Davis",
-    submittedDate: "2024-03-18T08:15:00",
-    estimatedCompletion: "2024-03-21",
-    description: "Streetlight has been out for several days, creating safety concern for pedestrians.",
-    photos: [],
-    updates: 1,
-    lastUpdate: "2024-03-18T08:15:00",
-  },
-  {
-    id: "ISS-2024-003",
-    title: "Playground equipment damage",
-    category: "Parks & Recreation",
-    categoryColor: "#059669",
-    status: "Completed",
-    priority: "Medium",
-    reporter: {
-      name: "Maria Garcia",
-      email: "maria.garcia@email.com",
-      phone: "(518) 555-0456",
-      anonymous: false,
-    },
-    location: {
-      address: "Lincoln Park - Playground Area",
-      coordinates: "42.6850, -73.8420",
-      ward: "Ward 3",
-    },
-    department: "Parks & Recreation",
-    assignedTo: "Tom Wilson",
-    submittedDate: "2024-03-10T16:45:00",
-    estimatedCompletion: "2024-03-24",
-    description: "Swing set chain is broken, making it unsafe for children to use.",
-    photos: ["/placeholder.svg?height=100&width=100"],
-    updates: 5,
-    lastUpdate: "2024-03-19T11:30:00",
-  },
-]
-
-const issueUpdates = [
-  {
-    id: 1,
-    issueId: "ISS-2024-001",
-    timestamp: "2024-03-18T14:20:00",
-    author: "Mike Johnson",
-    department: "Public Works",
-    type: "Status Update",
-    message: "Work crew dispatched to assess the damage. Materials ordered for repair.",
-    status: "In Progress",
-    isPublic: true,
-  },
-  {
-    id: 2,
-    issueId: "ISS-2024-001",
-    timestamp: "2024-03-16T09:15:00",
-    author: "Mike Johnson",
-    department: "Public Works",
-    type: "Assignment",
-    message: "Issue assigned to Public Works crew. Scheduled for assessment on March 18th.",
-    status: "In Progress",
-    isPublic: true,
-  },
-  {
-    id: 3,
-    issueId: "ISS-2024-001",
-    timestamp: "2024-03-15T10:30:00",
-    author: "System",
-    department: "System",
-    type: "Created",
-    message: "Issue reported by John Smith. Awaiting department assignment.",
-    status: "Pending",
-    isPublic: false,
-  },
-]
+// Import our API client
+import { 
+  issuesApi, 
+  issuesUtils,
+  type Issue,
+  type IssueCategory,
+  type IssueUpdate,
+  type IssuePhoto,
+  type SearchFilters
+} from "@/lib/issues-api"
 
 export default function IssueReportsManagement() {
+  const router = useRouter()
+  
+  // State management
   const [activeTab, setActiveTab] = useState("reports")
+  const [allIssues, setAllIssues] = useState<Issue[]>([]) // Store all issues
+  const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]) // Filtered issues for display
+  const [categories, setCategories] = useState<IssueCategory[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
+  
+  // Dialog states
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isUpdateOpen, setIsUpdateOpen] = useState(false)
-  const [selectedIssue, setSelectedIssue] = useState(null)
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
-  const [departmentFilter, setDepartmentFilter] = useState("all")
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "In Progress":
-        return "bg-blue-100 text-blue-800"
-      case "Completed":
-        return "bg-green-100 text-green-800"
-      case "Cancelled":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "Critical":
-        return "bg-red-600 text-white"
-      case "High":
-        return "bg-red-100 text-red-800"
-      case "Medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "Low":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getIconComponent = (iconName: string) => {
-    const icons = {
-      Car,
-      Lightbulb,
-      TreePine,
-      Building,
-      AlertTriangle,
-      Wrench,
-    }
-    const IconComponent = icons[iconName] || AlertTriangle
-    return <IconComponent className="h-5 w-5" />
-  }
-
-  const filteredReports = issueReports.filter((report) => {
-    if (statusFilter !== "all" && report.status !== statusFilter) return false
-    if (priorityFilter !== "all" && report.priority !== priorityFilter) return false
-    if (departmentFilter !== "all" && report.department !== departmentFilter) return false
-    return true
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false)
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
+  
+  // Form states
+  const [newCategory, setNewCategory] = useState({ name: "", description: "", icon: "❓" })
+  const [newIssue, setNewIssue] = useState({
+    title: "",
+    description: "",
+    category_id: "",
+    location: "",
+    photos: [] as File[]
   })
+  const [newStatus, setNewStatus] = useState("")
+  const [statusDescription, setStatusDescription] = useState("")
+  const [messageTitle, setMessageTitle] = useState("")
+  const [messageDescription, setMessageDescription] = useState("")
+  const [newUpdate, setNewUpdate] = useState<{
+    update_type: 'status_change' | 'message' | 'resolution' | 'system'
+    title: string
+    description: string
+    is_public: boolean
+    new_status: string
+  }>({
+    update_type: "message",
+    title: "",
+    description: "",
+    is_public: true,
+    new_status: ""
+  })
+  const [deletingItem, setDeletingItem] = useState<{ type: 'issue' | 'category'; item: any } | null>(null)
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  
+  const { toast } = useToast()
+
+  // Load data once on mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  // Filter issues when data or filters change (immediate for status/category, debounced for search)
+  useEffect(() => {
+    filterIssues()
+  }, [allIssues, statusFilter, categoryFilter])
+
+  // Debounced search effect for better performance
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      filterIssues()
+    }, 300) // 300ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
+  // Filter issues based on search query and filters
+  const filterIssues = () => {
+    let filtered = [...allIssues]
+
+    // Filter by search query (title only)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(issue => 
+        issue.title.toLowerCase().includes(query)
+      )
+    }
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(issue => issue.status === statusFilter)
+    }
+
+    // Filter by category
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(issue => issue.category_id === parseInt(categoryFilter))
+    }
+
+    setFilteredIssues(filtered)
+  }
+
+  // Load all data
+  const loadData = async () => {
+    setIsLoading(true)
+    try {
+      // Load all issues without filters for client-side filtering
+      const issuesResult = await issuesApi.listIssues({
+        sort_by: "created_at",
+        sort_order: "desc",
+        limit: 1000 // Load more issues for client-side filtering
+      })
+
+      // Load categories
+      const categoriesResult = await issuesApi.listCategories()
+
+      if (issuesResult.success && issuesResult.data) {
+        setAllIssues(issuesResult.data.issues)
+      } else {
+        // Only show error toast if it's not a 404 (endpoints not implemented yet)
+        if (!issuesResult.error?.includes('404')) {
+          toast({
+            title: "Error loading issues",
+            description: issuesResult.error || "Failed to load issues",
+            variant: "destructive"
+          })
+        }
+        // Set empty array for 404s (graceful fallback)
+        setAllIssues([])
+      }
+
+      if (categoriesResult.success && categoriesResult.data) {
+        setCategories(categoriesResult.data.categories)
+      } else {
+        // Only show error toast if it's not a 404 (endpoints not implemented yet)
+        if (!categoriesResult.error?.includes('404')) {
+          toast({
+            title: "Error loading categories",
+            description: categoriesResult.error || "Failed to load categories",
+            variant: "destructive"
+          })
+        }
+        // Set empty array for 404s (graceful fallback)
+        setCategories([])
+      }
+
+    } catch (error) {
+      toast({
+        title: "Error loading data",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Issue operations
+  const handleUpdateIssueStatus = async (issueId: number, newStatus: string, description: string = "") => {
+    setIsUpdating(true)
+    try {
+      const result = await issuesApi.updateIssueStatus(issueId, { status: newStatus, description })
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Issue status updated successfully"
+        })
+        loadData()
+        // Only close dialog and reset form on success
+        setIsStatusDialogOpen(false)
+        setNewStatus("")
+        setStatusDescription("")
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update issue status",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update issue status",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleCreateUpdate = async () => {
+    if (!selectedIssue || !newUpdate.description.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide an update description",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const result = await issuesApi.shortId.createIssueUpdate(selectedIssue.short_id, newUpdate)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Update added successfully"
+        })
+        
+        loadData()
+        setIsUpdateOpen(false)
+        resetUpdateForm()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to add update",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add update",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleCreateMessage = async () => {
+    if (!selectedIssue || !messageTitle.trim() || !messageDescription.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide both title and message",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const result = await issuesApi.shortId.createIssueUpdate(selectedIssue.short_id, {
+        update_type: 'message',
+        title: messageTitle,
+        description: messageDescription
+      })
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Message added successfully"
+        })
+        loadData()
+        // Only close dialog and reset form on success
+        setIsMessageDialogOpen(false)
+        setMessageTitle("")
+        setMessageDescription("")
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to add message",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add message",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Category operations
+  const handleCreateCategory = async () => {
+    if (!newCategory.name.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a category name",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const result = await issuesApi.createCategory(newCategory)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Category created successfully"
+        })
+        loadData()
+        setIsCategoryOpen(false)
+        setNewCategory({ name: "", description: "", icon: "❓" })
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create category",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create category",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDeleteItem = async () => {
+    if (!deletingItem) return
+
+    try {
+      let result
+      
+      if (deletingItem.type === 'issue') {
+        result = await issuesApi.deleteIssue(deletingItem.item.id)
+      } else if (deletingItem.type === 'category') {
+        result = await issuesApi.deleteCategory(deletingItem.item.id)
+      }
+
+      if (result?.success) {
+        toast({
+          title: "Success",
+          description: `${deletingItem.type} deleted successfully`
+        })
+        loadData()
+        
+        if (deletingItem.type === 'issue' && selectedIssue?.id === deletingItem.item.id) {
+          setIsDetailOpen(false)
+          setSelectedIssue(null)
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result?.error || `Failed to delete ${deletingItem.type}`,
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to delete ${deletingItem.type}`,
+        variant: "destructive"
+      })
+    } finally {
+      setIsDeleteOpen(false)
+      setDeletingItem(null)
+    }
+  }
+
+  // Helper functions
+  const openIssueDetail = (issue: Issue) => {
+    // Navigate immediately to avoid waiting using short_id (works with track endpoint)
+    router.push(`/issues/${issue.short_id}`)
+  }
+
+  const openStatusDialog = (issue: Issue, presetStatus?: string) => {
+    setSelectedIssue(issue)
+    if (presetStatus) {
+      setNewStatus(presetStatus)
+    }
+    setIsStatusDialogOpen(true)
+  }
+
+  const openMessageDialog = (issue: Issue) => {
+    setSelectedIssue(issue)
+    setIsMessageDialogOpen(true)
+  }
+
+  // Issue creation
+  const handleCreateIssue = async () => {
+    if (!newIssue.title.trim() || !newIssue.description.trim() || !newIssue.category_id) {
+      toast({
+        title: "Validation Error",
+        description: "Title, description, and category are required",
+        variant: "destructive"
+      })
+      return
+    }
+
+
+    try {
+      setIsUpdating(true)
+      const issueData = {
+        title: newIssue.title,
+        description: newIssue.description,
+        category_id: parseInt(newIssue.category_id),
+        location: newIssue.location || undefined,
+        reporter_name: "Admin User",
+        reporter_email: "admin@albanyledger.com",
+        ...(newIssue.photos.length > 0 && { photos: newIssue.photos })
+      }
+
+
+      const result = await issuesApi.createIssue(issueData)
+
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Issue created successfully"
+        })
+        setIsCreateIssueOpen(false)
+        setNewIssue({
+          title: "",
+          description: "",
+          category_id: "",
+          location: "",
+          photos: []
+        })
+        loadData()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create issue",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create issue",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const openDeleteDialog = (type: 'issue' | 'category', item: any) => {
+    setDeletingItem({ type, item })
+    setIsDeleteOpen(true)
+  }
+
+  const resetUpdateForm = () => {
+    setNewUpdate({
+      update_type: "message",
+      title: "",
+      description: "",
+      is_public: true,
+      new_status: ""
+    })
+  }
+
 
   return (
     <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-[#5e6461]">Issue Reports Management</h2>
-              <p className="text-[#5e6461]/70">Manage citizen-reported issues and track resolutions</p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
-                <Input
-                  placeholder="Search issues..."
-                  className="pl-10 w-64 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
-                />
-              </div>
-
-              <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => setIsCategoryOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </div>
-          </div>
-        </header>
+      {/* Header */}
+      <Header 
+        title="Issue Reports Management" 
+        subtitle="Manage citizen-reported issues and track resolutions"
+      />
 
         {/* Main Content */}
         <main className="flex-1 p-6">
+          {/* Search Bar */}
+          <div className="flex items-center mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
+              <Input
+                placeholder="Search issues..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-64 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
+              />
+            </div>
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white border border-gray-200">
               <TabsTrigger value="reports" className="data-[state=active]:bg-[#d36530] data-[state=active]:text-white">
+              <AlertCircle className="h-4 w-4 mr-2" />
                 Issue Reports
               </TabsTrigger>
-              <TabsTrigger
-                value="categories"
-                className="data-[state=active]:bg-[#d36530] data-[state=active]:text-white"
-              >
+            <TabsTrigger value="categories" className="data-[state=active]:bg-[#d36530] data-[state=active]:text-white">
+              <Building className="h-4 w-4 mr-2" />
                 Categories
-              </TabsTrigger>
-              <TabsTrigger value="tracking" className="data-[state=active]:bg-[#d36530] data-[state=active]:text-white">
-                Issue Tracking
-              </TabsTrigger>
-              <TabsTrigger value="updates" className="data-[state=active]:bg-[#d36530] data-[state=active]:text-white">
-                Updates & History
               </TabsTrigger>
             </TabsList>
 
             {/* Issue Reports Tab */}
             <TabsContent value="reports" className="space-y-6">
+
               {/* Filters */}
               <Card className="border-gray-200">
                 <CardContent className="p-4">
@@ -374,71 +556,51 @@ export default function IssueReportsManagement() {
                       <div className="flex items-center gap-2">
                         <Label htmlFor="status-filter">Status:</Label>
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-40">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="submitted">Submitted</SelectItem>
+                          <SelectItem value="under_review">Under Review</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
+                          <SelectItem value="closed">Closed</SelectItem>
+                          <SelectItem value="on_hold">On Hold</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="priority-filter">Priority:</Label>
-                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                          <SelectTrigger className="w-32">
+                      <Label htmlFor="category-filter">Category:</Label>
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-48">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="Critical">Critical</SelectItem>
-                            <SelectItem value="High">High</SelectItem>
-                            <SelectItem value="Medium">Medium</SelectItem>
-                            <SelectItem value="Low">Low</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="department-filter">Department:</Label>
-                        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                          <SelectTrigger className="w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="Public Works">Public Works</SelectItem>
-                            <SelectItem value="Utilities">Utilities</SelectItem>
-                            <SelectItem value="Parks & Recreation">Parks & Recreation</SelectItem>
-                            <SelectItem value="Code Enforcement">Code Enforcement</SelectItem>
-                            <SelectItem value="Public Safety">Public Safety</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.icon} {category.name}
+                            </SelectItem>
+                          ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Filter className="h-4 w-4 mr-2" />
-                        Advanced Filter
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Export
-                      </Button>
-                    </div>
+                    <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => setIsCreateIssueOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Issue
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Issue Reports Table */}
+            {/* Issues Table */}
               <Card className="border-gray-200">
                 <CardHeader>
                   <CardTitle className="text-[#5e6461]">Issue Reports</CardTitle>
-                  <CardDescription>{filteredReports.length} active reports</CardDescription>
+                  <CardDescription>{filteredIssues.length} issues {statusFilter !== "all" || categoryFilter !== "all" || searchQuery ? "(filtered)" : ""}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -448,54 +610,83 @@ export default function IssueReportsManagement() {
                         <TableHead>Title</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Priority</TableHead>
                         <TableHead>Reporter</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Submitted</TableHead>
+                      <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredReports.map((issue) => (
-                        <TableRow key={issue.id}>
-                          <TableCell className="font-medium">{issue.id}</TableCell>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <TableRow key={index}>
                           <TableCell>
-                            <div>
-                              <div className="font-medium text-[#5e6461]">{issue.title}</div>
-                              <div className="text-sm text-[#5e6461]/70 flex items-center gap-1">
-                                <MapPinIcon className="h-3 w-3" />
-                                {issue.location.address}
-                              </div>
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-48" />
+                              <Skeleton className="h-3 w-32" />
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge style={{ backgroundColor: issue.categoryColor, color: "white" }}>
-                              {issue.category}
-                            </Badge>
+                            <Skeleton className="h-6 w-20 rounded-full" />
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(issue.status)}>{issue.status}</Badge>
+                            <Skeleton className="h-6 w-24 rounded-full" />
                           </TableCell>
                           <TableCell>
-                            <Badge className={getPriorityColor(issue.priority)}>{issue.priority}</Badge>
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
                           </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-8 w-8 rounded ml-auto" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : filteredIssues.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-[#5e6461]/70">
+                          No issues found. Issues will appear here as they are reported.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredIssues.map((issue) => (
+                        <TableRow key={issue.id}>
+                          <TableCell className="font-mono text-sm">{issue.short_id}</TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium text-[#5e6461]">
-                                {issue.reporter.anonymous ? "Anonymous" : issue.reporter.name}
+                              <div className="font-medium text-[#5e6461]">{issue.title}</div>
+                              {issue.location_address && (
+                                <div className="text-sm text-[#5e6461]/70 flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {issue.location_address}
                               </div>
-                              {!issue.reporter.anonymous && (
-                                <div className="text-sm text-[#5e6461]/70">{issue.reporter.email}</div>
                               )}
                             </div>
                           </TableCell>
                           <TableCell>
+                            <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                              <span>{issue.category_icon}</span>
+                              {issue.category_name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={issuesUtils.getStatusColor(issue.status)}>
+                              {issuesUtils.getStatusLabel(issue.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <div>
-                              <div className="font-medium text-[#5e6461]">{issue.assignedTo}</div>
-                              <div className="text-sm text-[#5e6461]/70">{issue.department}</div>
+                              <div className="font-medium text-[#5e6461]">{issue.reporter_name}</div>
+                              <div className="text-sm text-[#5e6461]/70">{issue.reporter_email}</div>
                             </div>
                           </TableCell>
-                          <TableCell>{new Date(issue.submittedDate).toLocaleDateString()}</TableCell>
+                          <TableCell>{issuesUtils.formatDate(issue.created_at)}</TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -504,277 +695,101 @@ export default function IssueReportsManagement() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedIssue(issue)}>
+                                <DropdownMenuItem onClick={() => openIssueDetail(issue)}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Issue
+                                <DropdownMenuItem onClick={() => openStatusDialog(issue)}>
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Change Status
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setIsUpdateOpen(true)}>
+                                <DropdownMenuItem onClick={() => openMessageDialog(issue)}>
                                   <MessageSquare className="h-4 w-4 mr-2" />
-                                  Add Update
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <User className="h-4 w-4 mr-2" />
-                                  Reassign
+                                  Add Message
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => openStatusDialog(issue, "resolved")}
+                                  disabled={issue.status === "resolved"}
+                                >
                                   <CheckCircle className="h-4 w-4 mr-2" />
-                                  Mark Complete
+                                  Mark Resolved
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuItem
+                                  onClick={() => openStatusDialog(issue, "closed")}
+                                  disabled={issue.status === "closed"}
+                                >
                                   <XCircle className="h-4 w-4 mr-2" />
-                                  Cancel Issue
+                                  Close Issue
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => openDeleteDialog('issue', issue)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Issue
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ))
+                    )}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
+          </TabsContent>
 
-              {/* Issue Details Dialog */}
-              {selectedIssue && (
-                <Dialog open={!!selectedIssue} onOpenChange={() => setSelectedIssue(null)}>
-                  <DialogContent className="max-w-4xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        {selectedIssue.id}: {selectedIssue.title}
-                        <Badge className={getStatusColor(selectedIssue.status)}>{selectedIssue.status}</Badge>
-                      </DialogTitle>
-                      <DialogDescription>Issue details and management</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-2 gap-6 py-4">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium text-[#5e6461] mb-2">Issue Information</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Category:</span>
-                              <Badge style={{ backgroundColor: selectedIssue.categoryColor, color: "white" }}>
-                                {selectedIssue.category}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Priority:</span>
-                              <Badge className={getPriorityColor(selectedIssue.priority)}>
-                                {selectedIssue.priority}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Department:</span>
-                              <span>{selectedIssue.department}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Assigned To:</span>
-                              <span>{selectedIssue.assignedTo}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Estimated Completion:</span>
-                              <span>{new Date(selectedIssue.estimatedCompletion).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium text-[#5e6461] mb-2">Reporter Information</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Name:</span>
-                              <span>
-                                {selectedIssue.reporter.anonymous ? "Anonymous" : selectedIssue.reporter.name}
-                              </span>
-                            </div>
-                            {!selectedIssue.reporter.anonymous && (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-[#5e6461]/70">Email:</span>
-                                  <span>{selectedIssue.reporter.email}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-[#5e6461]/70">Phone:</span>
-                                  <span>{selectedIssue.reporter.phone}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium text-[#5e6461] mb-2">Location</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Address:</span>
-                              <span>{selectedIssue.location.address}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Ward:</span>
-                              <span>{selectedIssue.location.ward}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#5e6461]/70">Coordinates:</span>
-                              <span className="font-mono text-xs">{selectedIssue.location.coordinates}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium text-[#5e6461] mb-2">Description</h4>
-                          <p className="text-sm text-[#5e6461]/70 bg-gray-50 p-3 rounded-lg">
-                            {selectedIssue.description}
-                          </p>
-                        </div>
-
-                        {selectedIssue.photos.length > 0 && (
-                          <div>
-                            <h4 className="font-medium text-[#5e6461] mb-2">Photos</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                              {selectedIssue.photos.map((photo, index) => (
-                                <img
-                                  key={index}
-                                  src={photo || "/placeholder.svg"}
-                                  alt={`Issue photo ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border"
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div>
-                          <h4 className="font-medium text-[#5e6461] mb-2">Recent Updates</h4>
-                          <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {issueUpdates
-                              .filter((update) => update.issueId === selectedIssue.id)
-                              .slice(0, 3)
-                              .map((update) => (
-                                <div key={update.id} className="text-sm p-2 bg-gray-50 rounded">
-                                  <div className="flex justify-between items-start mb-1">
-                                    <span className="font-medium">{update.author}</span>
-                                    <span className="text-xs text-[#5e6461]/50">
-                                      {new Date(update.timestamp).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  <p className="text-[#5e6461]/70">{update.message}</p>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setSelectedIssue(null)}>
-                        Close
-                      </Button>
-                      <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => setIsUpdateOpen(true)}>
-                        Add Update
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              )}
-
-              {/* Add Update Dialog */}
-              <Dialog open={isUpdateOpen} onOpenChange={setIsUpdateOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Issue Update</DialogTitle>
-                    <DialogDescription>Add a status update or response to the issue.</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="update-type">Update Type</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select update type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="status">Status Update</SelectItem>
-                          <SelectItem value="response">Department Response</SelectItem>
-                          <SelectItem value="assignment">Assignment Change</SelectItem>
-                          <SelectItem value="completion">Completion Update</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="update-status">New Status</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="update-message">Update Message</Label>
-                      <Textarea
-                        id="update-message"
-                        placeholder="Enter update message..."
-                        rows={4}
-                        className="resize-none"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="estimated-completion">Estimated Completion Date</Label>
-                      <Input id="estimated-completion" type="date" />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="public-update" defaultChecked />
-                      <Label htmlFor="public-update">Make update visible to reporter</Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsUpdateOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
-                      <Send className="h-4 w-4 mr-2" />
-                      Add Update
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </TabsContent>
-
-            {/* Categories Tab */}
-            <TabsContent value="categories" className="space-y-6">
-              <Card className="border-gray-200">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-[#5e6461]">Issue Categories</CardTitle>
-                    <CardDescription>Manage issue types and department assignments</CardDescription>
-                  </div>
-                  <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => setIsCategoryOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
-                </CardHeader>
-                <CardContent>
+          {/* Categories Tab */}
+          <TabsContent value="categories" className="space-y-6">
+            <Card className="border-gray-200">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-[#5e6461]">Issue Categories</CardTitle>
+                  <CardDescription>Manage issue types and categories</CardDescription>
+                </div>
+                <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => setIsCategoryOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {issueCategories.map((category) => (
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <Card key={index} className="border border-gray-200">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-8 w-8 rounded" />
+                              <div>
+                                <Skeleton className="h-5 w-32 mb-1" />
+                                <Skeleton className="h-4 w-48" />
+                              </div>
+                            </div>
+                            <Skeleton className="h-8 w-8 rounded" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-4 w-24" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : categories.length === 0 ? (
+                  <div className="text-center py-8 text-[#5e6461]/70">
+                    No categories found. Create your first category to get started.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {categories.map((category) => (
                       <Card key={category.id} className="border border-gray-200">
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div
-                                className="p-2 rounded-lg"
-                                style={{ backgroundColor: `${category.color}20`, color: category.color }}
-                              >
-                                {getIconComponent(category.icon)}
-                              </div>
+                              <div className="text-2xl">{category.icon}</div>
                               <div>
                                 <CardTitle className="text-lg text-[#5e6461]">{category.name}</CardTitle>
                                 <CardDescription>{category.description}</CardDescription>
@@ -787,15 +802,20 @@ export default function IssueReportsManagement() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Category
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    setCategoryFilter(category.id.toString())
+                                    setActiveTab('reports')
+                                  }}
+                                >
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Issues
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => openDeleteDialog('category', category)}
+                                >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete Category
                                 </DropdownMenuItem>
@@ -804,30 +824,351 @@ export default function IssueReportsManagement() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-[#5e6461]">Department:</span>
-                              <p className="text-[#5e6461]/70">{category.department}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-[#5e6461]">Default Priority:</span>
-                              <Badge className={getPriorityColor(category.priority)}>{category.priority}</Badge>
-                            </div>
-                            <div>
-                              <span className="font-medium text-[#5e6461]">Active Issues:</span>
-                              <p className="text-[#5e6461]/70">{category.issueCount}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-[#5e6461]">Avg Resolution:</span>
-                              <p className="text-[#5e6461]/70">{category.avgResolutionDays} days</p>
-                            </div>
+                          <div className="text-sm text-[#5e6461]/70">
+                            Created: {issuesUtils.formatDate(category.created_at)}
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+        </Tabs>
+
+        {/* Issue Detail Dialog */}
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                {selectedIssue?.short_id}: {selectedIssue?.title}
+                {selectedIssue && (
+                  <Badge className={issuesUtils.getStatusColor(selectedIssue.status)}>
+                    {issuesUtils.getStatusLabel(selectedIssue.status)}
+                  </Badge>
+                )}
+                      </DialogTitle>
+                      <DialogDescription>Issue details and management</DialogDescription>
+                    </DialogHeader>
+            
+            {selectedIssue && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-[#5e6461] mb-2">Issue Information</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-[#5e6461]/70">Category:</span>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          {selectedIssue.category_icon} {selectedIssue.category_name}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                        <span className="text-[#5e6461]/70">Status:</span>
+                        <Badge className={issuesUtils.getStatusColor(selectedIssue.status)}>
+                          {issuesUtils.getStatusLabel(selectedIssue.status)}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between">
+                        <span className="text-[#5e6461]/70">Views:</span>
+                        <span>{selectedIssue.view_count}</span>
+                            </div>
+                            <div className="flex justify-between">
+                        <span className="text-[#5e6461]/70">Created:</span>
+                        <span>{issuesUtils.formatDateTime(selectedIssue.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="font-medium text-[#5e6461] mb-2">Reporter Information</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-[#5e6461]/70">Name:</span>
+                        <span>{selectedIssue.reporter_name}</span>
+                            </div>
+                                <div className="flex justify-between">
+                                  <span className="text-[#5e6461]/70">Email:</span>
+                        <span>{selectedIssue.reporter_email}</span>
+                                </div>
+                          </div>
+                        </div>
+
+                  {selectedIssue.location_address && (
+                        <div>
+                          <h4 className="font-medium text-[#5e6461] mb-2">Location</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-[#5e6461]/70">Address:</span>
+                          <span>{selectedIssue.location_address}</span>
+                            </div>
+                        {selectedIssue.ward && (
+                            <div className="flex justify-between">
+                              <span className="text-[#5e6461]/70">Ward:</span>
+                            <span>{selectedIssue.ward}</span>
+                            </div>
+                        )}
+                            </div>
+                          </div>
+                  )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium text-[#5e6461] mb-2">Description</h4>
+                          <p className="text-sm text-[#5e6461]/70 bg-gray-50 p-3 rounded-lg">
+                            {selectedIssue.description}
+                          </p>
+                        </div>
+
+                  {selectedIssue.photos && selectedIssue.photos.length > 0 && (
+                          <div>
+                      <h4 className="font-medium text-[#5e6461] mb-2">Photos ({selectedIssue.photos.length})</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                        {selectedIssue.photos.map((photo: IssuePhoto) => (
+                          <div key={photo.id} className="relative">
+                            <img
+                              src={photo.file_url}
+                              alt={photo.caption || `Photo ${photo.sort_order + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                              onClick={() => window.open(photo.file_url, '_blank')}
+                            />
+                          </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                  {selectedIssue.updates && selectedIssue.updates.length > 0 && (
+                        <div>
+                      <h4 className="font-medium text-[#5e6461] mb-2">Recent Updates ({selectedIssue.updates.length})</h4>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {selectedIssue.updates.slice(0, 5).map((update: IssueUpdate) => (
+                          <div key={update.id} className="text-sm p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex justify-between items-start mb-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">
+                                  {issuesUtils.getUpdateTypeLabel(update.update_type)}
+                                </Badge>
+                                {update.is_public && (
+                                  <Badge className="bg-green-100 text-green-800 text-xs">Public</Badge>
+                                )}
+                              </div>
+                                    <span className="text-xs text-[#5e6461]/50">
+                                {issuesUtils.formatDateTime(update.created_at)}
+                                    </span>
+                                  </div>
+                            {update.title && (
+                              <div className="font-medium text-[#5e6461] mb-1">{update.title}</div>
+                            )}
+                            <p className="text-[#5e6461]/70">{update.description}</p>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                  )}
+                      </div>
+                    </div>
+            )}
+            
+                    <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
+                        Close
+                      </Button>
+              {selectedIssue && (
+                <Button 
+                  className="bg-[#d36530] hover:bg-[#d36530]/90" 
+                  onClick={() => openUpdateDialog(selectedIssue)}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                        Add Update
+                      </Button>
+              )}
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+              {/* Add Update Dialog */}
+              <Dialog open={isUpdateOpen} onOpenChange={setIsUpdateOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Issue Update</DialogTitle>
+              <DialogDescription>Add a status update or message to the issue.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="update-type">Update Type</Label>
+                <Select 
+                  value={newUpdate.update_type} 
+                  onValueChange={(value) => setNewUpdate({...newUpdate, update_type: value as any})}
+                >
+                        <SelectTrigger>
+                    <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                    <SelectItem value="message">Message</SelectItem>
+                    <SelectItem value="status_change">Status Change</SelectItem>
+                    <SelectItem value="resolution">Resolution</SelectItem>
+                    <SelectItem value="system">System Update</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+              {newUpdate.update_type === "status_change" && (
+                    <div className="space-y-2">
+                  <Label htmlFor="new-status">New Status</Label>
+                  <Select 
+                    value={newUpdate.new_status} 
+                    onValueChange={(value) => setNewUpdate({...newUpdate, new_status: value})}
+                  >
+                        <SelectTrigger>
+                      <SelectValue placeholder="Select new status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                      <SelectItem value="submitted">Submitted</SelectItem>
+                      <SelectItem value="under_review">Under Review</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="on_hold">On Hold</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+              )}
+
+                    <div className="space-y-2">
+                <Label htmlFor="update-title">Title (Optional)</Label>
+                <Input
+                  id="update-title"
+                  placeholder="Enter update title..."
+                  value={newUpdate.title}
+                  onChange={(e) => setNewUpdate({...newUpdate, title: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="update-description">Description</Label>
+                      <Textarea
+                  id="update-description"
+                        placeholder="Enter update message..."
+                        rows={4}
+                  value={newUpdate.description}
+                  onChange={(e) => setNewUpdate({...newUpdate, description: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                <Switch 
+                  id="public-update" 
+                  checked={newUpdate.is_public}
+                  onCheckedChange={(checked) => setNewUpdate({...newUpdate, is_public: checked})}
+                />
+                      <Label htmlFor="public-update">Make update visible to reporter</Label>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsUpdateOpen(false)}>
+                      Cancel
+                    </Button>
+              <Button 
+                className="bg-[#d36530] hover:bg-[#d36530]/90"
+                onClick={handleCreateUpdate}
+                disabled={isUpdating || !newUpdate.description.trim()}
+              >
+                {isUpdating ? "Adding..." : "Add Update"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Create Issue Dialog */}
+              <Dialog open={isCreateIssueOpen} onOpenChange={setIsCreateIssueOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create New Issue</DialogTitle>
+                    <DialogDescription>
+                      Create a new issue report from the admin perspective
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="issue-title">Title</Label>
+                      <Input
+                        id="issue-title"
+                        value={newIssue.title}
+                        onChange={(e) => setNewIssue({ ...newIssue, title: e.target.value })}
+                        placeholder="Brief description of the issue"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="issue-description">Description</Label>
+                      <Textarea
+                        id="issue-description"
+                        value={newIssue.description}
+                        onChange={(e) => setNewIssue({ ...newIssue, description: e.target.value })}
+                        placeholder="Detailed description of the issue"
+                        rows={4}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="issue-category">Category</Label>
+                      <Select value={newIssue.category_id} onValueChange={(value) => setNewIssue({ ...newIssue, category_id: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.icon} {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="issue-location">Location (Optional)</Label>
+                      <Input
+                        id="issue-location"
+                        value={newIssue.location}
+                        onChange={(e) => setNewIssue({ ...newIssue, location: e.target.value })}
+                        placeholder="Address or location description"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="issue-photos">Photos (Optional)</Label>
+                      <Input
+                        id="issue-photos"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || [])
+                          setNewIssue({ ...newIssue, photos: files })
+                        }}
+                      />
+                      {newIssue.photos.length > 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {newIssue.photos.length} photo(s) selected
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCreateIssueOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className="bg-[#d36530] hover:bg-[#d36530]/90"
+                      onClick={handleCreateIssue}
+                      disabled={isUpdating || !newIssue.title.trim() || !newIssue.description.trim() || !newIssue.category_id}
+                    >
+                      Create Issue
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* Add Category Dialog */}
               <Dialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen}>
@@ -839,289 +1180,162 @@ export default function IssueReportsManagement() {
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label htmlFor="category-name">Category Name</Label>
-                      <Input id="category-name" placeholder="Enter category name" />
+                <Input 
+                  id="category-name" 
+                  placeholder="Enter category name"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="category-description">Description</Label>
-                      <Textarea id="category-description" placeholder="Enter category description..." rows={2} />
+                <Textarea 
+                  id="category-description" 
+                  placeholder="Enter category description..." 
+                  rows={2}
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({...newCategory, description: e.target.value})}
+                />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="category-icon">Icon</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select icon" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Car">Road & Infrastructure</SelectItem>
-                            <SelectItem value="Lightbulb">Street Lighting</SelectItem>
-                            <SelectItem value="TreePine">Parks & Recreation</SelectItem>
-                            <SelectItem value="Building">Building & Code</SelectItem>
-                            <SelectItem value="AlertTriangle">Public Safety</SelectItem>
-                            <SelectItem value="Wrench">Utilities</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category-color">Color</Label>
-                        <Input id="category-color" type="color" defaultValue="#d36530" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="category-department">Department</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="public-works">Public Works</SelectItem>
-                            <SelectItem value="utilities">Utilities</SelectItem>
-                            <SelectItem value="parks-recreation">Parks & Recreation</SelectItem>
-                            <SelectItem value="code-enforcement">Code Enforcement</SelectItem>
-                            <SelectItem value="public-safety">Public Safety</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category-priority">Default Priority</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="critical">Critical</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                <Label htmlFor="category-icon">Icon (Emoji)</Label>
+                <Input 
+                  id="category-icon" 
+                  placeholder="Enter emoji (e.g., 🚧)"
+                  value={newCategory.icon}
+                  onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
+                />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCategoryOpen(false)}>
                       Cancel
                     </Button>
-                    <Button className="bg-[#d36530] hover:bg-[#d36530]/90">Add Category</Button>
+              <Button 
+                className="bg-[#d36530] hover:bg-[#d36530]/90"
+                onClick={handleCreateCategory}
+                disabled={!newCategory.name.trim()}
+              >
+                Add Category
+              </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </TabsContent>
 
-            {/* Issue Tracking Tab */}
-            <TabsContent value="tracking" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-[#5e6461] flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5" />
-                      Issue Statistics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <div className="text-2xl font-bold text-[#5e6461]">23</div>
-                      <div className="text-sm text-[#5e6461]/70">Pending Issues</div>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-[#5e6461]">45</div>
-                      <div className="text-sm text-[#5e6461]/70">In Progress</div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-[#5e6461]">156</div>
-                      <div className="text-sm text-[#5e6461]/70">Completed This Month</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-[#5e6461] flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Response Times
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-[#5e6461]/70">Average Response:</span>
-                        <span className="font-medium">2.3 days</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-[#5e6461]/70">Average Resolution:</span>
-                        <span className="font-medium">8.7 days</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-[#5e6461]/70">Critical Issues:</span>
-                        <span className="font-medium">4.2 hours</span>
-                      </div>
-                    </div>
-                    <div className="pt-2">
-                      <h4 className="font-medium text-[#5e6461] mb-2">By Department</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Public Works:</span>
-                          <span>7.2 days</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Utilities:</span>
-                          <span>3.1 days</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Parks & Rec:</span>
-                          <span>12.5 days</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-[#5e6461] flex items-center gap-2">
-                      <MapPinIcon className="h-5 w-5" />
-                      Location Tracking
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-[#5e6461]">Issues by Ward</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Ward 1:</span>
-                          <span>18 issues</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ward 2:</span>
-                          <span>25 issues</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ward 3:</span>
-                          <span>15 issues</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ward 4:</span>
-                          <span>22 issues</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="pt-2">
-                      <h4 className="font-medium text-[#5e6461] mb-2">Hot Spots</h4>
-                      <div className="space-y-1 text-sm text-[#5e6461]/70">
-                        <div>• Main Street (8 issues)</div>
-                        <div>• Oak Avenue (6 issues)</div>
-                        <div>• Lincoln Park (4 issues)</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Status Change Dialog */}
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Issue Status</DialogTitle>
+              <DialogDescription>
+                Update the status of issue: {selectedIssue?.short_id}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="submitted">Submitted</SelectItem>
+                    <SelectItem value="under_review">Under Review</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="statusDescription">Description (Optional)</Label>
+                <Textarea
+                  id="statusDescription"
+                  placeholder="Add a description for this status change..."
+                  value={statusDescription}
+                  onChange={(e) => setStatusDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsStatusDialogOpen(false)}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="bg-[#d36530] hover:bg-[#d36530]/90"
+                onClick={() => {
+                  if (selectedIssue && newStatus) {
+                    handleUpdateIssueStatus(selectedIssue.id, newStatus, statusDescription)
+                  }
+                }}
+                disabled={!newStatus || isUpdating}
+              >
+                {isUpdating ? "Updating..." : "Update Status"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-              <Card className="border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-[#5e6461]">Issue ID Generation Settings</CardTitle>
-                  <CardDescription>Configure automatic issue ID generation and tracking</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="id-prefix">ID Prefix</Label>
-                      <Input id="id-prefix" defaultValue="ISS" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="id-format">ID Format</Label>
-                      <Select defaultValue="year-sequential">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="year-sequential">YYYY-###</SelectItem>
-                          <SelectItem value="sequential">######</SelectItem>
-                          <SelectItem value="date-sequential">YYYYMMDD-##</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="auto-assignment" defaultChecked />
-                    <Label htmlFor="auto-assignment">Auto-assign to departments based on category</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="location-validation" defaultChecked />
-                    <Label htmlFor="location-validation">Validate addresses against city database</Label>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+        {/* Add Message Dialog */}
+        <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Message</DialogTitle>
+              <DialogDescription>
+                Add a message to issue: {selectedIssue?.short_id}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="messageTitle">Title</Label>
+                <Input
+                  id="messageTitle"
+                  placeholder="Message title..."
+                  value={messageTitle}
+                  onChange={(e) => setMessageTitle(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="messageDescription">Message</Label>
+                <Textarea
+                  id="messageDescription"
+                  placeholder="Enter your message..."
+                  value={messageDescription}
+                  onChange={(e) => setMessageDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="bg-[#d36530] hover:bg-[#d36530]/90"
+                onClick={handleCreateMessage}
+                disabled={!messageTitle.trim() || !messageDescription.trim() || isUpdating}
+              >
+                {isUpdating ? "Adding..." : "Add Message"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-            {/* Updates & History Tab */}
-            <TabsContent value="updates" className="space-y-6">
-              <Card className="border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-[#5e6461]">Recent Issue Updates</CardTitle>
-                  <CardDescription>Latest updates and responses across all issues</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {issueUpdates.map((update) => (
-                      <Card key={update.id} className="border border-gray-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">{update.issueId}</Badge>
-                                <Badge className={getStatusColor(update.status)}>{update.status}</Badge>
-                                <Badge variant="secondary">{update.type}</Badge>
-                                {update.isPublic && <Badge className="bg-green-100 text-green-800">Public</Badge>}
-                              </div>
-                              <p className="text-[#5e6461] mb-2">{update.message}</p>
-                              <div className="flex items-center gap-4 text-sm text-[#5e6461]/70">
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {update.author}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Building className="h-3 w-3" />
-                                  {update.department}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(update.timestamp).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Issue
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Update
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Update
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          title={`Delete ${deletingItem?.type}`}
+          description={`Are you sure you want to delete this ${deletingItem?.type}? This action cannot be undone.`}
+          onConfirm={handleDeleteItem}
+        />
         </main>
       </div>
   )
 }
+

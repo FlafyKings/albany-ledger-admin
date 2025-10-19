@@ -22,6 +22,7 @@ export interface CalendarEventAPI {
   all_day: boolean
   event_type_id: string
   location: string | null
+  ward: string | null // Add ward field
   created_at: string
   updated_at: string
   created_by: string | null
@@ -71,6 +72,7 @@ export interface CreateEventRequest {
   all_day?: boolean
   event_type_id: string // Event type ID instead of string
   location?: string
+  ward?: string // Add ward field
 }
 
 export interface UpdateEventRequest {
@@ -81,6 +83,7 @@ export interface UpdateEventRequest {
   all_day?: boolean
   event_type_id?: string // Event type ID instead of string
   location?: string
+  ward?: string // Add ward field
 }
 
 // Calendar API client
@@ -90,6 +93,7 @@ export const calendarApi = {
     start_date?: string
     end_date?: string
     event_type_id?: string
+    ward?: string // Add ward filtering
     limit?: number
     offset?: number
   }) {
@@ -97,6 +101,7 @@ export const calendarApi = {
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
     if (params?.event_type_id) queryParams.append('event_type_id', params.event_type_id)
+    if (params?.ward) queryParams.append('ward', params.ward)
     if (params?.limit) queryParams.append('limit', params.limit.toString())
     if (params?.offset) queryParams.append('offset', params.offset.toString())
     
@@ -280,6 +285,7 @@ export function apiEventToLocal(apiEvent: CalendarEventAPI): import('@/types/cal
     allDay: apiEvent.all_day,
     type: apiEvent.event_types?.name || 'unknown' as import('@/types/calendar').EventType, // Use name from event_types object with fallback
     location: apiEvent.location || undefined,
+    ward: apiEvent.ward || undefined, // Add ward field
   }
 }
 
@@ -292,5 +298,6 @@ export function localEventToApi(localEvent: Omit<import('@/types/calendar').Cale
     all_day: localEvent.allDay || false,
     event_type_id: eventTypeId, // Use event type ID instead of string
     location: localEvent.location,
+    ward: localEvent.ward, // Add ward field
   }
 } 

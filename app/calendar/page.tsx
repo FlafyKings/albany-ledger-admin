@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Plus, Calendar as CalendarIcon, Tag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,15 +9,34 @@ import { CreateEventForm } from "@/components/calendar/create-event-form"
 import { EventTypesManager } from "@/components/calendar/event-types-manager"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { calendarApi, apiEventToLocal, localEventToApi, type EventTypeAPI } from "@/lib/calendar-api"
 import type { CalendarEvent } from "@/types/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarSkeleton } from "@/components/calendar/calendar-skeleton"
 
+// Ward options for filtering
+const WARD_OPTIONS = [
+  { value: "all", label: "All Wards" },
+  { value: "Ward 1", label: "Ward 1" },
+  { value: "Ward 2", label: "Ward 2" },
+  { value: "Ward 3", label: "Ward 3" },
+  { value: "Ward 4", label: "Ward 4" },
+  { value: "Ward 5", label: "Ward 5" },
+  { value: "Ward 6", label: "Ward 6" },
+]
+
 export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventTypes, setEventTypes] = useState<EventTypeAPI[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedWard, setSelectedWard] = useState("all")
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false)
   const [isEditFormOpen, setIsEditFormOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
@@ -69,20 +88,13 @@ export default function CalendarPage() {
     return config
   }, [eventTypes, isClient])
 
-  // Load events and event types on component mount
-  useEffect(() => {
-    loadEvents()
-    loadEventTypes()
-  }, [])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await calendarApi.getEvents()
       if (response.success && response.data) {
         const convertedEvents = response.data.events.map(apiEventToLocal)
         setEvents(convertedEvents)
-        console.log(`Loaded ${convertedEvents.length} events from API`)
       } else {
         throw new Error(response.error || 'Failed to load events')
       }
@@ -96,15 +108,36 @@ export default function CalendarPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
 
-  const loadEventTypes = async () => {
+  const loadEventsWithWardFilter = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await calendarApi.getEvents({ ward: selectedWard })
+      if (response.success && response.data) {
+        const convertedEvents = response.data.events.map(apiEventToLocal)
+        setEvents(convertedEvents)
+      } else {
+        throw new Error(response.error || 'Failed to load events')
+      }
+    } catch (error) {
+      console.error('Error loading events with ward filter:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load calendar events. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [selectedWard, toast])
+
+  const loadEventTypes = useCallback(async () => {
     setIsLoadingEventTypes(true)
     try {
       const response = await calendarApi.getEventTypes()
       if (response.success && response.data) {
         setEventTypes(response.data)
-        console.log(`Loaded ${response.data.length} event types from API`)
       } else {
         throw new Error(response.error || 'Failed to load event types')
       }
@@ -118,7 +151,22 @@ export default function CalendarPage() {
     } finally {
       setIsLoadingEventTypes(false)
     }
-  }
+  }, [toast])
+
+  // Load events and event types on component mount
+  useEffect(() => {
+    loadEvents()
+    loadEventTypes()
+  }, [loadEvents, loadEventTypes])
+
+  // Reload events when ward filter changes
+  useEffect(() => {
+    if (selectedWard !== "all") {
+      loadEventsWithWardFilter()
+    } else {
+      loadEvents()
+    }
+  }, [selectedWard, loadEventsWithWardFilter, loadEvents])
 
   const handleEventCreate = async (newEvent: Omit<CalendarEvent, "id">) => {
     setIsCreating(true)
@@ -212,7 +260,7 @@ export default function CalendarPage() {
       
       if (response.success && response.data) {
         // Create blob and download
-        const blob = new Blob([response.data], { type: 'text/calendar; charset=utf-8' })
+        const blob = new Blob([typeof response.data === 'string' ? response.data : JSON.stringify(response.data)], { type: 'text/calendar; charset=utf-8' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
@@ -270,51 +318,66 @@ export default function CalendarPage() {
             <p className="text-[#5e6461]/70">Track commission, county, school board, and election events</p>
           </div>
 
-          <Sheet open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
-            <SheetTrigger asChild>
-              <Button className="bg-[#d36530] hover:bg-[#d36530]/90 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Event
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="text-[#5e6461]">Create New Event</SheetTitle>
-                <SheetDescription className="text-[#5e6461]/70">Add a new event to the calendar. Fill in the details below.</SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                <CreateEventForm 
-                  eventTypeConfig={eventTypeConfig}
-                  onEventCreate={handleEventCreate} 
-                  initialDate={selectedDate || undefined}
-                  isLoading={isCreating}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-3">
+            <Select value={selectedWard} onValueChange={setSelectedWard}>
+              <SelectTrigger className="w-40 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]">
+                <SelectValue placeholder="Filter by ward" />
+              </SelectTrigger>
+              <SelectContent>
+                {WARD_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Edit Event Form Sheet */}
-          <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-            <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="text-[#5e6461]">Edit Event</SheetTitle>
-                <SheetDescription className="text-[#5e6461]/70">Update the event details below.</SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                {editingEvent && (
+            <Sheet open={isCreateFormOpen} onOpenChange={setIsCreateFormOpen}>
+              <SheetTrigger asChild>
+                <Button className="bg-[#d36530] hover:bg-[#d36530]/90 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Event
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle className="text-[#5e6461]">Create New Event</SheetTitle>
+                  <SheetDescription className="text-[#5e6461]/70">Add a new event to the calendar. Fill in the details below.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
                   <CreateEventForm 
                     eventTypeConfig={eventTypeConfig}
-                    onEventCreate={handleEventCreate}
-                    onEventUpdate={handleEventUpdate}
-                    editEvent={editingEvent}
-                    isLoading={isUpdating}
+                    onEventCreate={handleEventCreate} 
+                    initialDate={selectedDate || undefined}
+                    isLoading={isCreating}
                   />
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
+
+      {/* Edit Event Form Sheet */}
+      <Sheet open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-[#5e6461]">Edit Event</SheetTitle>
+            <SheetDescription className="text-[#5e6461]/70">Update the event details below.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            {editingEvent && (
+              <CreateEventForm 
+                eventTypeConfig={eventTypeConfig}
+                onEventCreate={handleEventCreate}
+                onEventUpdate={handleEventUpdate}
+                editEvent={editingEvent}
+                isLoading={isUpdating}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content */}
       <main className="flex-1 p-6">

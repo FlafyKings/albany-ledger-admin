@@ -119,7 +119,6 @@ Helper functions `apiEventToLocal()` and `localEventToApi()` handle the conversi
 6. **Refresh**: Click refresh button to reload current view
 
 ### Console Debugging
-The implementation includes console.log statements for debugging:
 - Event loading counts
 - API response validation
 - Error details

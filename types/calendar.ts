@@ -8,6 +8,7 @@ export interface CalendarEvent {
   endDate: Date
   type: EventType
   location?: string
+  ward?: string // Add ward field
   allDay?: boolean
 }
 

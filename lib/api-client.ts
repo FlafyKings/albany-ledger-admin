@@ -74,10 +74,12 @@ export async function apiCall<T>(
 export const api = {
   get: <T>(endpoint: string) => apiCall<T>(endpoint, { method: 'GET' }),
   
-  post: <T>(endpoint: string, body?: any) => apiCall<T>(endpoint, {
-    method: 'POST',
-    body: body ? JSON.stringify(body) : undefined,
-  }),
+  post: <T>(endpoint: string, body?: any) => {
+    return apiCall<T>(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    })
+  },
   
   // Special method for FormData (file uploads)
   postForm: <T>(endpoint: string, formData: FormData, customHeaders?: Record<string, string>) => {

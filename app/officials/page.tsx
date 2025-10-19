@@ -15,6 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -25,9 +32,21 @@ import { deleteOfficial, getOfficials, type Official } from "@/data/officials"
 
 // Sidebar is now provided by the app layout
 
+// Ward options for filtering
+const WARD_OPTIONS = [
+  { value: "all", label: "All Wards" },
+  { value: "Ward 1", label: "Ward 1" },
+  { value: "Ward 2", label: "Ward 2" },
+  { value: "Ward 3", label: "Ward 3" },
+  { value: "Ward 4", label: "Ward 4" },
+  { value: "Ward 5", label: "Ward 5" },
+  { value: "Ward 6", label: "Ward 6" },
+]
+
 export default function OfficialsIndexPage() {
   const { toast } = useToast()
   const [query, setQuery] = useState("")
+  const [selectedWard, setSelectedWard] = useState("all")
   const [loading, setLoading] = useState(true)
   const [copying, setCopying] = useState(false)
   const [list, setList] = useState<Official[]>([])
@@ -72,17 +91,29 @@ export default function OfficialsIndexPage() {
   }
 
   const filtered = useMemo(() => {
+    let result = list
+    
+    // Filter by ward
+    if (selectedWard !== "all") {
+      result = result.filter((o) => o.ward === selectedWard)
+    }
+    
+    // Filter by search query
     const q = query.trim().toLowerCase()
-    if (!q) return list
-    return list.filter((o) => {
-      return (
-        o.name.toLowerCase().includes(q) ||
-        o.roleTitle.toLowerCase().includes(q) ||
-        o.contact.email.toLowerCase().includes(q) ||
-        o.contact.phone.toLowerCase().includes(q)
-      )
-    })
-  }, [query, list])
+    if (q) {
+      result = result.filter((o) => {
+        return (
+          o.name.toLowerCase().includes(q) ||
+          o.roleTitle.toLowerCase().includes(q) ||
+          o.contact.email.toLowerCase().includes(q) ||
+          o.contact.phone.toLowerCase().includes(q) ||
+          (o.ward && o.ward.toLowerCase().includes(q))
+        )
+      })
+    }
+    
+    return result
+  }, [query, list, selectedWard])
 
   const handleDelete = (id: number) => {
     setConfirmDialog({
@@ -150,12 +181,24 @@ export default function OfficialsIndexPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5e6461]/50" />
                 <Input
-                  placeholder="Search by name, email, role..."
+                  placeholder="Search by name, email, role, ward..."
                   className="pl-10 w-72 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
+              <Select value={selectedWard} onValueChange={setSelectedWard}>
+                <SelectTrigger className="w-40 border-gray-300 focus:border-[#d36530] focus:ring-[#d36530]">
+                  <SelectValue placeholder="Filter by ward" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WARD_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Link href="/officials/new">
                 <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
                   <Plus className="h-4 w-4 mr-2" />
@@ -196,6 +239,7 @@ export default function OfficialsIndexPage() {
                     <TableRow>
                       <TableHead>Official</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead>Ward</TableHead>
                       <TableHead>Term</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Office</TableHead>
@@ -218,6 +262,9 @@ export default function OfficialsIndexPage() {
                           </TableCell>
                           <TableCell>
                             <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                          </TableCell>
+                          <TableCell>
+                            <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
                           </TableCell>
                           <TableCell>
                             <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
@@ -244,8 +291,8 @@ export default function OfficialsIndexPage() {
                       ))
                     ) : filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-[#5e6461]/60">
-                          {query ? 'No officials found matching your search.' : 'No officials found.'}
+                        <TableCell colSpan={8} className="text-center py-8 text-[#5e6461]/60">
+                          {query || selectedWard !== "all" ? 'No officials found matching your filters.' : 'No officials found.'}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -265,6 +312,15 @@ export default function OfficialsIndexPage() {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">{o.roleTitle}</TableCell>
+                          <TableCell>
+                            {o.ward ? (
+                              <Badge variant="outline" className="bg-[#d36530]/10 text-[#d36530] border-[#d36530]/20">
+                                {o.ward}
+                              </Badge>
+                            ) : (
+                              <span className="text-[#5e6461]/50 text-sm">No ward</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {new Date(o.termStart).getFullYear()}–{new Date(o.termEnd).getFullYear()}
                           </TableCell>

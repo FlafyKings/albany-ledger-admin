@@ -45,6 +45,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
     }
   }, [eventTypeConfig, editEvent, type])
   const [location, setLocation] = useState(editEvent?.location || "")
+  const [ward, setWard] = useState(editEvent?.ward || "")
   const [startDate, setStartDate] = useState<Date | undefined>(
     editEvent ? new Date(editEvent.startDate) : initialDate
   )
@@ -130,6 +131,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       description: description || undefined,
       type,
       location: location || undefined,
+      ward: ward || undefined,
       allDay,
       startDate,
       endDate: allDay ? endDate : undefined,
@@ -173,6 +175,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       description: validatedData.description || undefined,
       type: validatedData.type,
       location: validatedData.location || undefined,
+      ward: validatedData.ward || undefined,
       startDate: start,
       endDate: end,
       allDay: validatedData.allDay,
@@ -190,6 +193,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
       setDescription("")
       setType(Object.keys(eventTypeConfig).length > 0 ? Object.keys(eventTypeConfig)[0] as EventType : "")
       setLocation("")
+      setWard("")
       setStartDate(undefined)
       setEndDate(undefined)
       setStartTime("09:00")
@@ -228,7 +232,7 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
           </SelectTrigger>
           <SelectContent>
             {Object.entries(eventTypeConfig).length === 0 ? (
-              <SelectItem value="" disabled>
+              <SelectItem value="no-types" disabled>
                 No event types available
               </SelectItem>
             ) : (
@@ -382,6 +386,27 @@ export function CreateEventForm({ eventTypeConfig, onEventCreate, onEventUpdate,
         />
         {getFieldError("location") && (
           <p className="text-sm text-red-600">{getFieldError("location")}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ward" className="text-[#5e6461] font-medium">Ward</Label>
+        <Select value={ward || "none"} onValueChange={(val) => setWard(val === "none" ? "" : val)}>
+          <SelectTrigger className={`cursor-pointer border-[#5e6461]/20 focus:border-[#d36530] focus:ring-[#d36530]/20 ${hasFieldError("ward") ? "border-red-500 focus:border-red-500" : ""}`}>
+            <SelectValue placeholder="Select ward (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No ward</SelectItem>
+            <SelectItem value="Ward 1">Ward 1</SelectItem>
+            <SelectItem value="Ward 2">Ward 2</SelectItem>
+            <SelectItem value="Ward 3">Ward 3</SelectItem>
+            <SelectItem value="Ward 4">Ward 4</SelectItem>
+            <SelectItem value="Ward 5">Ward 5</SelectItem>
+            <SelectItem value="Ward 6">Ward 6</SelectItem>
+          </SelectContent>
+        </Select>
+        {getFieldError("ward") && (
+          <p className="text-sm text-red-600">{getFieldError("ward")}</p>
         )}
       </div>
 

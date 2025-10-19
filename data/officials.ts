@@ -52,6 +52,7 @@ export type Official = {
   roleTitle: string
   termStart: string
   termEnd: string
+  ward?: string // Add ward field
   contact: {
     email: string
     phone: string

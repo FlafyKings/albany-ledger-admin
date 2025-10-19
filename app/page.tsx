@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BreakingNewsAlert } from "@/lib/content-api"
 import {
   Calendar,
   FileText,
@@ -16,7 +15,6 @@ import {
   Vote,
   Shield,
   Plus,
-  Filter,
   MoreHorizontal,
   Eye,
   Edit,
@@ -37,6 +35,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Header } from "@/components/Header"
 
+// Import API clients
+import { issuesApi, type Issue } from "@/lib/issues-api"
+import { questionsApi, type Question } from "@/lib/questions-api"
+import { calendarApi, type CalendarEventAPI } from "@/lib/calendar-api"
+import { statsApi, type NewsletterStats } from "@/lib/newsletter-api"
+
 const sidebarItems = [
   { icon: Home, label: "Dashboard", href: "/", active: true },
   { icon: FileText, label: "Content", href: "/content" },
@@ -53,30 +57,86 @@ const sidebarItems = [
   { icon: Settings, label: "System Config", href: "/settings" },
 ]
 
+// Dashboard data types
+interface DashboardData {
+  pendingIssues: number
+  upcomingMeetings: number
+  pendingQuestions: number
+  newsletterSubscribers: number
+  recentIssues: Issue[]
+  recentQuestions: Question[]
+  upcomingEvents: CalendarEventAPI[]
+}
+
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("Dashboard")
-  const [activeBreakingNews, setActiveBreakingNews] = useState<BreakingNewsAlert | null>(null)
-  const [isLoadingBreakingNews, setIsLoadingBreakingNews] = useState(true)
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    pendingIssues: 0,
+    upcomingMeetings: 0,
+    pendingQuestions: 0,
+    newsletterSubscribers: 0,
+    recentIssues: [],
+    recentQuestions: [],
+    upcomingEvents: []
+  })
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Fetch active breaking news on component mount
+  // Fetch dashboard data
   useEffect(() => {
-    const fetchActiveBreakingNews = async () => {
+    const fetchDashboardData = async () => {
       try {
-        setIsLoadingBreakingNews(true)
-        const response = await fetch('/api/public/breaking-news/active')
-        if (response.ok) {
-          const alerts = await response.json()
-          // Since we ensure only one active alert, take the first one
-          setActiveBreakingNews(alerts.length > 0 ? alerts[0] : null)
-        }
+        setIsLoading(true)
+        
+        // Fetch all data in parallel
+        const [
+          issuesResponse,
+          questionsResponse,
+          calendarResponse,
+          newsletterResponse
+        ] = await Promise.all([
+          issuesApi.getStatistics(),
+          questionsApi.listQuestions({ limit: 10 }),
+          calendarApi.getEvents({ limit: 10 }),
+          statsApi.get()
+        ])
+
+        // Process issues data
+        const issuesStats = issuesResponse.success ? issuesResponse.data : null
+        const pendingIssues = issuesStats?.issues_by_status?.find(s => s.status === 'submitted')?.count || 0
+        const recentIssues = issuesStats?.recent_issues || []
+
+        // Process questions data
+        const questions = questionsResponse.success ? 
+          questionsResponse.data?.questions || [] : []
+        const pendingQuestions = questions.filter(q => q.status === 'pending').length
+        const recentQuestions = questions.slice(0, 5)
+
+        // Process calendar data
+        const upcomingEvents = calendarResponse.success ? 
+          calendarResponse.data?.events || [] : []
+        const upcomingMeetings = upcomingEvents.length
+
+        // Process newsletter data
+        const newsletterSubscribers = newsletterResponse.success ? 
+          newsletterResponse.data?.total_subscribers || 0 : 0
+
+        setDashboardData({
+          pendingIssues,
+          upcomingMeetings,
+          pendingQuestions,
+          newsletterSubscribers,
+          recentIssues,
+          recentQuestions,
+          upcomingEvents
+        })
       } catch (error) {
-        console.error('Error fetching active breaking news:', error)
+        console.error('Error fetching dashboard data:', error)
       } finally {
-        setIsLoadingBreakingNews(false)
+        setIsLoading(false)
       }
     }
 
-    fetchActiveBreakingNews()
+    fetchDashboardData()
   }, [])
 
   return (
@@ -93,14 +153,13 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border-gray-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-[#5e6461]">Active Issues</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#5e6461]">Pending Issues</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-[#d36530]" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#5e6461]">23</div>
-                <p className="text-xs text-[#5e6461]/70">
-                  <span className="text-red-600">+2</span> from yesterday
-                </p>
+                <div className="text-2xl font-bold text-[#5e6461]">
+                  {isLoading ? "..." : dashboardData.pendingIssues}
+                </div>
               </CardContent>
             </Card>
 
@@ -110,8 +169,9 @@ export default function AdminDashboard() {
                 <Calendar className="h-4 w-4 text-[#d36530]" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#5e6461]">8</div>
-                <p className="text-xs text-[#5e6461]/70">Next: City Council (Today 7PM)</p>
+                <div className="text-2xl font-bold text-[#5e6461]">
+                  {isLoading ? "..." : dashboardData.upcomingMeetings}
+                </div>
               </CardContent>
             </Card>
 
@@ -121,8 +181,9 @@ export default function AdminDashboard() {
                 <MessageSquare className="h-4 w-4 text-[#d36530]" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#5e6461]">12</div>
-                <p className="text-xs text-[#5e6461]/70">Avg response: 2.3 days</p>
+                <div className="text-2xl font-bold text-[#5e6461]">
+                  {isLoading ? "..." : dashboardData.pendingQuestions}
+                </div>
               </CardContent>
             </Card>
 
@@ -132,10 +193,9 @@ export default function AdminDashboard() {
                 <Mail className="h-4 w-4 text-[#d36530]" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#5e6461]">1,247</div>
-                <p className="text-xs text-[#5e6461]/70">
-                  <span className="text-green-600">+15</span> this week
-                </p>
+                <div className="text-2xl font-bold text-[#5e6461]">
+                  {isLoading ? "..." : dashboardData.newsletterSubscribers.toLocaleString()}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -155,103 +215,6 @@ export default function AdminDashboard() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Breaking News Management */}
-                <Card className="border-gray-200">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-[#5e6461]">Breaking News</CardTitle>
-                      <CardDescription>Current active announcement</CardDescription>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="bg-[#d36530] hover:bg-[#d36530]/90"
-                      onClick={() => window.location.href = '/content'}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Manage Alerts
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingBreakingNews ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-[#d36530]" />
-                        <span className="ml-2 text-[#5e6461]/60">Loading...</span>
-                      </div>
-                    ) : activeBreakingNews ? (
-                      <div className="space-y-3">
-                        <div className={`flex items-center justify-between p-3 rounded-lg border ${
-                          activeBreakingNews.priority === 'Critical' ? 'bg-red-50 border-red-200' :
-                          activeBreakingNews.priority === 'High' ? 'bg-orange-50 border-orange-200' :
-                          activeBreakingNews.priority === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
-                          'bg-green-50 border-green-200'
-                        }`}>
-                          <div>
-                            <p className="font-medium text-[#5e6461]">{activeBreakingNews.title}</p>
-                            <p className="text-sm text-[#5e6461]/70">
-                              {activeBreakingNews.expiration_date 
-                                ? `Expires: ${new Date(activeBreakingNews.expiration_date).toLocaleDateString()}`
-                                : 'No expiration set'
-                              }
-                            </p>
-                          </div>
-                          <Badge className={
-                            activeBreakingNews.priority === 'Critical' ? 'bg-red-100 text-red-800' :
-                            activeBreakingNews.priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                            activeBreakingNews.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }>
-                            {activeBreakingNews.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-[#5e6461]/60">
-                        <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No active breaking news alert</p>
-                        <p className="text-sm">Create one to display on the website and mobile app</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Recent Activity */}
-                <Card className="border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-[#5e6461]">Recent Activity</CardTitle>
-                    <CardDescription>Latest system activity</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-[#5e6461]">New issue report submitted</p>
-                          <p className="text-xs text-[#5e6461]/70">Ward 3 - Pothole on Oak Street</p>
-                        </div>
-                        <span className="text-xs text-[#5e6461]/70">2m ago</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-[#5e6461]">Meeting agenda updated</p>
-                          <p className="text-xs text-[#5e6461]/70">City Council - March 15</p>
-                        </div>
-                        <span className="text-xs text-[#5e6461]/70">15m ago</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-[#d36530] rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-[#5e6461]">Document uploaded</p>
-                          <p className="text-xs text-[#5e6461]/70">Budget Report 2024.pdf</p>
-                        </div>
-                        <span className="text-xs text-[#5e6461]/70">1h ago</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Quick Actions */}
               <Card className="border-gray-200">
                 <CardHeader>
@@ -260,34 +223,42 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Button
-                      variant="outline"
-                      className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent"
-                    >
-                      <Plus className="h-5 w-5" />
-                      <span className="text-sm">Add Official</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent"
-                    >
-                      <Calendar className="h-5 w-5" />
-                      <span className="text-sm">Schedule Meeting</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent"
-                    >
-                      <FileText className="h-5 w-5" />
-                      <span className="text-sm">Upload Document</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent"
-                    >
-                      <Mail className="h-5 w-5" />
-                      <span className="text-sm">Send Newsletter</span>
-                    </Button>
+                    <Link href="/officials/new">
+                      <Button
+                        variant="outline"
+                        className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent w-full"
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span className="text-sm">Add Official</span>
+                      </Button>
+                    </Link>
+                    <Link href="/calendar">
+                      <Button
+                        variant="outline"
+                        className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent w-full"
+                      >
+                        <Calendar className="h-5 w-5" />
+                        <span className="text-sm">Schedule Meeting</span>
+                      </Button>
+                    </Link>
+                    <Link href="/documents">
+                      <Button
+                        variant="outline"
+                        className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent w-full"
+                      >
+                        <FileText className="h-5 w-5" />
+                        <span className="text-sm">Upload Document</span>
+                      </Button>
+                    </Link>
+                    <Link href="/newsletter/create">
+                      <Button
+                        variant="outline"
+                        className="h-20 flex flex-col gap-2 border-gray-300 hover:border-[#d36530] hover:text-[#d36530] bg-transparent w-full"
+                      >
+                        <Mail className="h-5 w-5" />
+                        <span className="text-sm">Send Newsletter</span>
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
@@ -301,10 +272,12 @@ export default function AdminDashboard() {
                     <CardTitle className="text-[#5e6461]">Featured Stories</CardTitle>
                     <CardDescription>Manage homepage featured content</CardDescription>
                   </div>
-                  <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Story
-                  </Button>
+                  <Link href="/content/articles/new">
+                    <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Story
+                    </Button>
+                  </Link>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -330,27 +303,11 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>March 20, 2024</TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Link href="/content/articles/1">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                       <TableRow>
@@ -364,27 +321,11 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>March 18, 2024</TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Link href="/content/articles/2">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -396,88 +337,67 @@ export default function AdminDashboard() {
             <TabsContent value="reports" className="space-y-6">
               {/* Issue Reports */}
               <Card className="border-gray-200">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-[#5e6461]">Recent Issue Reports</CardTitle>
-                    <CardDescription>Latest citizen-reported issues</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filter
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Export
-                    </Button>
-                  </div>
+                <CardHeader>
+                  <CardTitle className="text-[#5e6461]">Recent Issue Reports</CardTitle>
+                  <CardDescription>Latest citizen-reported issues</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Issue ID</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">#2024-001</TableCell>
-                        <TableCell>Pothole</TableCell>
-                        <TableCell>Oak Street & 3rd Ave</TableCell>
-                        <TableCell>
-                          <Badge className="bg-yellow-100 text-yellow-800">In Progress</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="destructive">High</Badge>
-                        </TableCell>
-                        <TableCell>2 hours ago</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">#2024-002</TableCell>
-                        <TableCell>Streetlight</TableCell>
-                        <TableCell>Main Street</TableCell>
-                        <TableCell>
-                          <Badge className="bg-red-100 text-red-800">Pending</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">Medium</Badge>
-                        </TableCell>
-                        <TableCell>4 hours ago</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">#2024-003</TableCell>
-                        <TableCell>Graffiti</TableCell>
-                        <TableCell>City Hall</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">Completed</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">Low</Badge>
-                        </TableCell>
-                        <TableCell>1 day ago</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                  {isLoading ? (
+                    <div className="text-center py-8 text-[#5e6461]/70">Loading recent issues...</div>
+                  ) : dashboardData.recentIssues.length === 0 ? (
+                    <div className="text-center py-8 text-[#5e6461]/70">No recent issues found</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Issue ID</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Ward</TableHead>
+                          <TableHead>Submitted</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dashboardData.recentIssues.slice(0, 5).map((issue) => (
+                          <TableRow key={issue.id}>
+                            <TableCell className="font-medium">#{issue.short_id}</TableCell>
+                            <TableCell>{issue.category_name || 'General'}</TableCell>
+                            <TableCell>{issue.location_address || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                className={
+                                  issue.status === 'submitted' 
+                                    ? "bg-red-100 text-red-800"
+                                    : issue.status === 'in_progress'
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800"
+                                }
+                              >
+                                {issue.status.replace('_', ' ').toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {issue.ward || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(issue.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Link href={`/issues/${issue.id}`}>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -9,6 +9,7 @@ export const officialsApi = {
     search?: string; 
     role?: string; 
     status?: string;
+    ward?: string; // Add ward filtering
     limit?: number;
     offset?: number;
   }) => {
@@ -16,6 +17,7 @@ export const officialsApi = {
     if (params?.search) searchParams.append('search', params.search)
     if (params?.role) searchParams.append('role', params.role)
     if (params?.status) searchParams.append('status', params.status)
+    if (params?.ward) searchParams.append('ward', params.ward)
     if (params?.limit) searchParams.append('limit', params.limit.toString())
     if (params?.offset) searchParams.append('offset', params.offset.toString())
     const query = searchParams.toString()
@@ -95,6 +97,7 @@ export function transformApiOfficial(apiOfficial: any): Official {
     roleTitle: apiOfficial.roleTitle || apiOfficial.role_title || '',
     termStart: apiOfficial.termStart || apiOfficial.term_start || '',
     termEnd: apiOfficial.termEnd || apiOfficial.term_end || '',
+    ward: apiOfficial.ward || undefined, // Add ward field
     contact: {
       email: apiOfficial.email,
       phone: apiOfficial.phone,
@@ -102,8 +105,8 @@ export function transformApiOfficial(apiOfficial: any): Official {
         addressLine1: apiOfficial.officeAddress || apiOfficial.office_address || '',
         addressLine2: apiOfficial.district || '',
         city: 'Albany',
-        state: 'NY',
-        zip: '12207',
+        state: 'GA', // Fix state to GA for Albany, Georgia
+        zip: '31701',
         room: undefined,
         hours: apiOfficial.officeHours || apiOfficial.office_hours || '',
       },
@@ -165,6 +168,7 @@ export function transformForApi(official: Partial<Official>): any {
     party: 'Democrat', // Default value since not in current schema
     office_address: official.contact?.office?.addressLine1 || '',
     office_hours: official.contact?.office?.hours || '',
+    ward: official.ward || undefined, // Add ward field
     status: 'active', // Default status as expected by backend
     // Committees - backend expects only committee_id and role
     committees: official.committees?.map(comm => ({

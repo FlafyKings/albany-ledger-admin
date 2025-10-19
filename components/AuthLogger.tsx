@@ -15,9 +15,8 @@ export default function AuthLogger() {
         
         // Visible in browser devtools
         // eslint-disable-next-line no-console
-        console.log(`[Auth] loggedIn=${loggedIn}`, { session: session?.user?.id || 'none' })
 
-        if (!loggedIn && window.location.pathname !== '/login') {
+        if (!loggedIn && window.location.pathname !== '/login' && window.location.pathname !== '/privacy') {
           const current = window.location.pathname + (window.location.search || '')
           const url = `/login?redirect=${encodeURIComponent(current)}`
           window.location.replace(url)
@@ -66,9 +65,8 @@ export default function AuthLogger() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const loggedIn = !!session?.user
       // eslint-disable-next-line no-console
-      console.log(`[Auth] State changed: ${event}, loggedIn=${loggedIn}`)
       
-      if (!loggedIn && window.location.pathname !== '/login') {
+      if (!loggedIn && window.location.pathname !== '/login' && window.location.pathname !== '/privacy') {
         const current = window.location.pathname + (window.location.search || '')
         const url = `/login?redirect=${encodeURIComponent(current)}`
         window.location.replace(url)
