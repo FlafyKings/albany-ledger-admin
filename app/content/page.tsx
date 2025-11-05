@@ -151,6 +151,11 @@ export default function ContentManagement() {
   })
   const [isEditingAlert, setIsEditingAlert] = useState(false)
   const [editingAlertId, setEditingAlertId] = useState<number | null>(null)
+  const [alertValidationErrors, setAlertValidationErrors] = useState<{
+    title?: string
+    content?: string
+    priority?: string
+  }>({})
 
   // Load data on component mount
   useEffect(() => {
@@ -332,7 +337,32 @@ export default function ContentManagement() {
     })
   }
 
+  // Validate alert form before submission
+  const validateAlertForm = (): boolean => {
+    const errors: { title?: string; content?: string; priority?: string } = {}
+    
+    if (!newAlertData.title.trim()) {
+      errors.title = 'Title is required'
+    }
+    
+    if (!newAlertData.content.trim()) {
+      errors.content = 'Content is required'
+    }
+    
+    if (!newAlertData.priority) {
+      errors.priority = 'Priority is required'
+    }
+    
+    setAlertValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const createBreakingNewsAlert = async () => {
+    // Validate before submitting
+    if (!validateAlertForm()) {
+      return
+    }
+    
     setCreatingAlert(true)
     
     try {
@@ -356,6 +386,7 @@ export default function ContentManagement() {
           channels: [],
           author: ''
         })
+        setAlertValidationErrors({})
         
         // Show success message with send count if available
         if (sentCount !== undefined) {
@@ -510,6 +541,7 @@ export default function ContentManagement() {
       channels: alert.channels || [],
       author: alert.author || ''
     })
+    setAlertValidationErrors({})
     setShowAlertDialog(true)
   }
 
@@ -541,6 +573,7 @@ export default function ContentManagement() {
           channels: [],
           author: ''
         })
+        setAlertValidationErrors({})
         toast({
           title: "Alert Updated",
           description: "Breaking news alert has been updated successfully.",
@@ -973,6 +1006,7 @@ export default function ContentManagement() {
                         channels: [],
                         author: ''
                       })
+                      setAlertValidationErrors({})
                     }
                   }}>
                     <DialogTrigger asChild>
@@ -1000,25 +1034,43 @@ export default function ContentManagement() {
                       </DialogHeader>
                       <div className={`space-y-4 ${creatingAlert ? 'opacity-50 pointer-events-none' : ''}`}>
                         <div className="space-y-2">
-                          <Label htmlFor="alert-title">Alert Title</Label>
+                          <Label htmlFor="alert-title">Alert Title <span className="text-red-500">*</span></Label>
                           <Input 
                             id="alert-title" 
                             placeholder="Brief, descriptive title"
                             value={newAlertData.title}
-                            onChange={(e) => setNewAlertData({...newAlertData, title: e.target.value})}
+                            onChange={(e) => {
+                              setNewAlertData({...newAlertData, title: e.target.value})
+                              if (alertValidationErrors.title) {
+                                setAlertValidationErrors({...alertValidationErrors, title: undefined})
+                              }
+                            }}
                             disabled={creatingAlert}
+                            className={alertValidationErrors.title ? 'border-red-500' : ''}
                           />
+                          {alertValidationErrors.title && (
+                            <p className="text-sm text-red-500">{alertValidationErrors.title}</p>
+                          )}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="alert-content">Alert Content</Label>
+                          <Label htmlFor="alert-content">Alert Content <span className="text-red-500">*</span></Label>
                           <Textarea 
                             id="alert-content" 
                             placeholder="Detailed alert message..." 
                             rows={4}
                             value={newAlertData.content}
-                            onChange={(e) => setNewAlertData({...newAlertData, content: e.target.value})}
+                            onChange={(e) => {
+                              setNewAlertData({...newAlertData, content: e.target.value})
+                              if (alertValidationErrors.content) {
+                                setAlertValidationErrors({...alertValidationErrors, content: undefined})
+                              }
+                            }}
                             disabled={creatingAlert}
+                            className={alertValidationErrors.content ? 'border-red-500' : ''}
                           />
+                          {alertValidationErrors.content && (
+                            <p className="text-sm text-red-500">{alertValidationErrors.content}</p>
+                          )}
                         </div>
                         {!isEditingAlert && (
                           <>
@@ -1041,12 +1093,17 @@ export default function ContentManagement() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor="alert-priority">Priority Level</Label>
+                                <Label htmlFor="alert-priority">Priority Level <span className="text-red-500">*</span></Label>
                                 <Select 
                                   value={newAlertData.priority} 
-                                  onValueChange={(value) => setNewAlertData({...newAlertData, priority: value})}
+                                  onValueChange={(value) => {
+                                    setNewAlertData({...newAlertData, priority: value})
+                                    if (alertValidationErrors.priority) {
+                                      setAlertValidationErrors({...alertValidationErrors, priority: undefined})
+                                    }
+                                  }}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className={alertValidationErrors.priority ? 'border-red-500' : ''}>
                                     <SelectValue placeholder="Select priority" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1056,6 +1113,9 @@ export default function ContentManagement() {
                                     <SelectItem value="Low">Low</SelectItem>
                                   </SelectContent>
                                 </Select>
+                                {alertValidationErrors.priority && (
+                                  <p className="text-sm text-red-500">{alertValidationErrors.priority}</p>
+                                )}
                               </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
