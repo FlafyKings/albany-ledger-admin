@@ -149,6 +149,8 @@ export default function ContentManagement() {
     channels: [] as string[],
     author: ''
   })
+  const [isEditingAlert, setIsEditingAlert] = useState(false)
+  const [editingAlertId, setEditingAlertId] = useState<number | null>(null)
 
   // Load data on component mount
   useEffect(() => {
@@ -401,7 +403,7 @@ export default function ContentManagement() {
           description: `Alert sent to ${response.data?.recipients || 0} recipients via selected channels.`,
         })
         // Refresh the alerts list
-        loadBreakingNewsAlerts()
+        loadBreakingNews()
       } else {
         toast({
           variant: "destructive",
@@ -492,6 +494,74 @@ export default function ContentManagement() {
         }
       }
     })
+  }
+
+  const handleEditBreakingNewsAlert = (alert: BreakingNewsAlert) => {
+    setIsEditingAlert(true)
+    setEditingAlertId(alert.id)
+    setNewAlertData({
+      title: alert.title,
+      content: alert.content,
+      type: alert.type,
+      priority: alert.priority,
+      status: alert.status,
+      publish_date: alert.publish_date || '',
+      expiration_date: alert.expiration_date || '',
+      channels: alert.channels || [],
+      author: alert.author || ''
+    })
+    setShowAlertDialog(true)
+  }
+
+  const updateBreakingNewsAlert = async () => {
+    if (!editingAlertId) return
+    setCreatingAlert(true)
+    try {
+      // Only send title, content, and website toggle - channels field is ignored by API
+      const websiteEnabled = newAlertData.channels.includes('Website')
+      const response = await breakingNewsApi.update(editingAlertId, {
+        title: newAlertData.title,
+        content: newAlertData.content,
+        website: websiteEnabled
+      })
+      if (response.success && response.data) {
+        // Refresh the alerts list to get updated data from server
+        await loadBreakingNews()
+        setShowAlertDialog(false)
+        setIsEditingAlert(false)
+        setEditingAlertId(null)
+        setNewAlertData({
+          title: '',
+          content: '',
+          type: '',
+          priority: '',
+          status: 'Draft',
+          publish_date: '',
+          expiration_date: '',
+          channels: [],
+          author: ''
+        })
+        toast({
+          title: "Alert Updated",
+          description: "Breaking news alert has been updated successfully.",
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: response.error || 'Failed to update breaking news alert',
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: 'Failed to update breaking news alert',
+      })
+      console.error('Error updating breaking news alert:', error)
+    } finally {
+      setCreatingAlert(false)
+    }
   }
 
   const deleteArticle = (id: number) => {
@@ -887,7 +957,24 @@ export default function ContentManagement() {
                     <CardTitle className="text-[#5e6461]">Breaking News Alerts</CardTitle>
                     <CardDescription>Manage emergency alerts and breaking news notifications</CardDescription>
                   </div>
-                  <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
+                  <Dialog open={showAlertDialog} onOpenChange={(open) => {
+                    setShowAlertDialog(open)
+                    if (!open) {
+                      setIsEditingAlert(false)
+                      setEditingAlertId(null)
+                      setNewAlertData({
+                        title: '',
+                        content: '',
+                        type: '',
+                        priority: '',
+                        status: 'Draft',
+                        publish_date: '',
+                        expiration_date: '',
+                        channels: [],
+                        author: ''
+                      })
+                    }
+                  }}>
                     <DialogTrigger asChild>
                       <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
                         <Plus className="h-4 w-4 mr-2" />
@@ -897,13 +984,18 @@ export default function ContentManagement() {
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>
-                          {creatingAlert ? "Creating & Sending Alert..." : "Create Breaking News Alert"}
+                          {creatingAlert 
+                            ? (isEditingAlert ? "Updating Alert..." : "Creating & Sending Alert...")
+                            : (isEditingAlert ? "Edit Breaking News Alert" : "Create Breaking News Alert")}
                         </DialogTitle>
                         <DialogDescription>
                           {creatingAlert 
-                            ? "Please wait while we create and send your alert to all subscribers..."
-                            : "Create a new emergency alert or breaking news notification"
-                          }
+                            ? (isEditingAlert 
+                                ? "Please wait while we update your alert..."
+                                : "Please wait while we create and send your alert to all subscribers...")
+                            : (isEditingAlert 
+                                ? "Update the alert details and save changes"
+                                : "Create a new emergency alert or breaking news notification")}
                         </DialogDescription>
                       </DialogHeader>
                       <div className={`space-y-4 ${creatingAlert ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -928,77 +1020,134 @@ export default function ContentManagement() {
                             disabled={creatingAlert}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="alert-type">Alert Type</Label>
-                            <Select 
-                              value={newAlertData.type} 
-                              onValueChange={(value) => setNewAlertData({...newAlertData, type: value})}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Emergency">Emergency</SelectItem>
-                                <SelectItem value="Weather">Weather</SelectItem>
-                                <SelectItem value="Traffic">Traffic</SelectItem>
-                                <SelectItem value="Announcement">Announcement</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="alert-priority">Priority Level</Label>
-                            <Select 
-                              value={newAlertData.priority} 
-                              onValueChange={(value) => setNewAlertData({...newAlertData, priority: value})}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Critical">Critical</SelectItem>
-                                <SelectItem value="High">High</SelectItem>
-                                <SelectItem value="Medium">Medium</SelectItem>
-                                <SelectItem value="Low">Low</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="publish-date">Publish Date</Label>
-                            <Input 
-                              id="publish-date" 
-                              type="datetime-local"
-                              value={newAlertData.publish_date}
-                              onChange={(e) => setNewAlertData({...newAlertData, publish_date: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="expiration-date">Expiration Date</Label>
-                            <Input 
-                              id="expiration-date" 
-                              type="datetime-local"
-                              value={newAlertData.expiration_date}
-                              onChange={(e) => setNewAlertData({...newAlertData, expiration_date: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="alert-author">Author</Label>
-                          <Input 
-                            id="alert-author" 
-                            placeholder="Author name"
-                            value={newAlertData.author}
-                            onChange={(e) => setNewAlertData({...newAlertData, author: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label>Distribution Channels</Label>
-                          <div className="grid grid-cols-2 gap-4">
+                        {!isEditingAlert && (
+                          <>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="alert-type">Alert Type</Label>
+                                <Select 
+                                  value={newAlertData.type} 
+                                  onValueChange={(value) => setNewAlertData({...newAlertData, type: value})}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Emergency">Emergency</SelectItem>
+                                    <SelectItem value="Weather">Weather</SelectItem>
+                                    <SelectItem value="Traffic">Traffic</SelectItem>
+                                    <SelectItem value="Announcement">Announcement</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="alert-priority">Priority Level</Label>
+                                <Select 
+                                  value={newAlertData.priority} 
+                                  onValueChange={(value) => setNewAlertData({...newAlertData, priority: value})}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Critical">Critical</SelectItem>
+                                    <SelectItem value="High">High</SelectItem>
+                                    <SelectItem value="Medium">Medium</SelectItem>
+                                    <SelectItem value="Low">Low</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="publish-date">Publish Date</Label>
+                                <Input 
+                                  id="publish-date" 
+                                  type="datetime-local"
+                                  value={newAlertData.publish_date}
+                                  onChange={(e) => setNewAlertData({...newAlertData, publish_date: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="expiration-date">Expiration Date</Label>
+                                <Input 
+                                  id="expiration-date" 
+                                  type="datetime-local"
+                                  value={newAlertData.expiration_date}
+                                  onChange={(e) => setNewAlertData({...newAlertData, expiration_date: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="alert-author">Author</Label>
+                              <Input 
+                                id="alert-author" 
+                                placeholder="Author name"
+                                value={newAlertData.author}
+                                onChange={(e) => setNewAlertData({...newAlertData, author: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-3">
+                              <Label>Distribution Channels</Label>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center space-x-2">
+                                  <Switch 
+                                    id="website" 
+                                    checked={newAlertData.channels.includes('Website')}
+                                    onCheckedChange={(checked) => {
+                                      const channels = checked 
+                                        ? [...newAlertData.channels, 'Website']
+                                        : newAlertData.channels.filter(c => c !== 'Website')
+                                      setNewAlertData({...newAlertData, channels})
+                                    }}
+                                  />
+                                  <Label htmlFor="website" className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4" />
+                                    Website
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Switch 
+                                    id="mobile" 
+                                    checked={newAlertData.channels.includes('Mobile App')}
+                                    onCheckedChange={(checked) => {
+                                      const channels = checked 
+                                        ? [...newAlertData.channels, 'Mobile App']
+                                        : newAlertData.channels.filter(c => c !== 'Mobile App')
+                                      setNewAlertData({...newAlertData, channels})
+                                    }}
+                                  />
+                                  <Label htmlFor="mobile" className="flex items-center gap-2">
+                                    <Smartphone className="h-4 w-4" />
+                                    Mobile App
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Switch 
+                                    id="email" 
+                                    checked={newAlertData.channels.includes('Email')}
+                                    onCheckedChange={(checked) => {
+                                      const channels = checked 
+                                        ? [...newAlertData.channels, 'Email']
+                                        : newAlertData.channels.filter(c => c !== 'Email')
+                                      setNewAlertData({...newAlertData, channels})
+                                    }}
+                                  />
+                                  <Label htmlFor="email" className="flex items-center gap-2">
+                                    <AtSign className="h-4 w-4" />
+                                    Email
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {isEditingAlert && (
+                          <div className="space-y-3 border-t pt-4">
+                            <Label>Website Visibility</Label>
                             <div className="flex items-center space-x-2">
                               <Switch 
-                                id="website" 
+                                id="edit-website" 
                                 checked={newAlertData.channels.includes('Website')}
                                 onCheckedChange={(checked) => {
                                   const channels = checked 
@@ -1006,46 +1155,18 @@ export default function ContentManagement() {
                                     : newAlertData.channels.filter(c => c !== 'Website')
                                   setNewAlertData({...newAlertData, channels})
                                 }}
+                                disabled={creatingAlert}
                               />
-                              <Label htmlFor="website" className="flex items-center gap-2">
+                              <Label htmlFor="edit-website" className="flex items-center gap-2">
                                 <Globe className="h-4 w-4" />
-                                Website
+                                Show on Website
                               </Label>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Switch 
-                                id="mobile" 
-                                checked={newAlertData.channels.includes('Mobile App')}
-                                onCheckedChange={(checked) => {
-                                  const channels = checked 
-                                    ? [...newAlertData.channels, 'Mobile App']
-                                    : newAlertData.channels.filter(c => c !== 'Mobile App')
-                                  setNewAlertData({...newAlertData, channels})
-                                }}
-                              />
-                              <Label htmlFor="mobile" className="flex items-center gap-2">
-                                <Smartphone className="h-4 w-4" />
-                                Mobile App
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Switch 
-                                id="email" 
-                                checked={newAlertData.channels.includes('Email')}
-                                onCheckedChange={(checked) => {
-                                  const channels = checked 
-                                    ? [...newAlertData.channels, 'Email']
-                                    : newAlertData.channels.filter(c => c !== 'Email')
-                                  setNewAlertData({...newAlertData, channels})
-                                }}
-                              />
-                              <Label htmlFor="email" className="flex items-center gap-2">
-                                <AtSign className="h-4 w-4" />
-                                Email
-                              </Label>
-                            </div>
+                            <p className="text-xs text-[#5e6461]/60">
+                              Note: Email, Push, and SMS notification channels cannot be changed. Only website visibility can be toggled.
+                            </p>
                           </div>
-                        </div>
+                        )}
                       </div>
                       <DialogFooter>
                         <Button 
@@ -1057,18 +1178,27 @@ export default function ContentManagement() {
                         </Button>
                         <Button 
                           className="bg-[#d36530] hover:bg-[#d36530]/90"
-                          onClick={createBreakingNewsAlert}
+                          onClick={isEditingAlert ? updateBreakingNewsAlert : createBreakingNewsAlert}
                           disabled={creatingAlert}
                         >
                           {creatingAlert ? (
                             <>
                               <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                              Creating & Sending...
+                              {isEditingAlert ? 'Updating...' : 'Creating & Sending...'}
                             </>
                           ) : (
                             <>
-                              <Send className="h-4 w-4 mr-2" />
-                              Create & Send Alert
+                              {isEditingAlert ? (
+                                <>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Update Alert
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Create & Send Alert
+                                </>
+                              )}
                             </>
                           )}
                         </Button>
@@ -1167,7 +1297,7 @@ export default function ContentManagement() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditBreakingNewsAlert(alert)}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Alert
                                 </DropdownMenuItem>
@@ -1258,7 +1388,10 @@ export default function ContentManagement() {
                       <Button variant="outline" onClick={() => setSelectedAlert(null)}>
                         Close
                       </Button>
-                      <Button className="bg-[#d36530] hover:bg-[#d36530]/90">
+                      <Button className="bg-[#d36530] hover:bg-[#d36530]/90" onClick={() => {
+                        handleEditBreakingNewsAlert(selectedAlert)
+                        setSelectedAlert(null)
+                      }}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Alert
                       </Button>

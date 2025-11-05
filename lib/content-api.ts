@@ -138,9 +138,9 @@ export const breakingNewsApi = {
   create: (data: CreateBreakingNewsData) => 
     api.post<BreakingNewsAlert>('/newsletter/admin/alerts', data),
 
-  // Update breaking news alert
-  update: (id: number, data: Partial<CreateBreakingNewsData>) => 
-    api.patch<BreakingNewsAlert>(`/newsletter/admin/alerts/${id}`, data),
+  // Update breaking news alert - only title, content, and website toggle
+  update: (id: number, data: { title?: string; content?: string; website?: boolean }) => 
+    api.put<BreakingNewsAlert>(`/api/breaking-news/${id}`, data),
 
   // Delete breaking news alert
   delete: (id: number) => api.delete(`/newsletter/admin/alerts/${id}`),

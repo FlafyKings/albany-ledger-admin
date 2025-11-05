@@ -2,10 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, Search, ChevronDown, LogOut, User, Settings } from "lucide-react"
+import { Search, ChevronDown, LogOut, User, Settings } from "lucide-react"
 import { createClient } from "@/lib/supabase"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -65,12 +64,7 @@ export function Header({ title, subtitle, searchPlaceholder = "Search...", showS
             </div>
           )}
 
-          <Button variant="outline" size="icon" className="relative bg-transparent">
-            <Bell className="h-4 w-4" />
-            <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-[#d36530] text-white text-xs">
-              3
-            </Badge>
-          </Button>
+          {/* Notifications removed */}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
