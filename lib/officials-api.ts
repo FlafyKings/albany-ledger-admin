@@ -91,16 +91,25 @@ export const publicOfficialsApi = {
 
 // Helper function to transform API response to match existing data structure
 export function transformApiOfficial(apiOfficial: any): Official {
+  // Validate required fields
+  if (!apiOfficial) {
+    throw new Error('Invalid official data: missing official object')
+  }
+  
+  if (!apiOfficial.id) {
+    throw new Error('Invalid official data: missing id')
+  }
+  
   return {
     id: apiOfficial.id,
-    name: apiOfficial.name,
+    name: apiOfficial.name || 'Unknown',
     roleTitle: apiOfficial.roleTitle || apiOfficial.role_title || '',
     termStart: apiOfficial.termStart || apiOfficial.term_start || '',
     termEnd: apiOfficial.termEnd || apiOfficial.term_end || '',
     ward: apiOfficial.ward || undefined, // Add ward field
     contact: {
-      email: apiOfficial.email,
-      phone: apiOfficial.phone,
+      email: apiOfficial.email || '',
+      phone: apiOfficial.phone || '',
       office: {
         addressLine1: apiOfficial.officeAddress || apiOfficial.office_address || '',
         addressLine2: apiOfficial.district || '',
@@ -114,24 +123,24 @@ export function transformApiOfficial(apiOfficial: any): Official {
     biography: apiOfficial.biography || '',
     experience: (apiOfficial.experience || []).map((exp: any) => ({
       id: String(exp.id || crypto.randomUUID()),
-      title: exp.title,
-      organization: exp.organization,
+      title: exp.title || '',
+      organization: exp.organization || '',
       startDate: exp.startDate || exp.start_date || '',
       endDate: exp.endDate || exp.end_date || '',
-      description: exp.description,
+      description: exp.description || '',
     })),
     committees: (apiOfficial.committees || []).map((comm: any) => ({
       id: String(comm.id || crypto.randomUUID()),
       committeeId: comm.committeeId || comm.committee_id || 1,
       name: `Committee ${comm.committeeId || comm.committee_id || 1}`, // We'll need to fetch committee names separately
-      role: comm.role,
+      role: comm.role || 'Member',
     })),
     votingHistory: [], // Not in current API response
     achievements: (apiOfficial.achievements || []).map((ach: any) => ({
       id: String(ach.id || crypto.randomUUID()),
-      title: ach.title,
-      description: ach.description,
-      period: ach.period,
+      title: ach.title || '',
+      description: ach.description || '',
+      period: ach.period || '',
     })),
     image: apiOfficial.imageUrl || apiOfficial.image_url || '/placeholder.svg?height=64&width=64',
   }

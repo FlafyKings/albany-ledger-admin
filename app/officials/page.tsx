@@ -65,11 +65,20 @@ export default function OfficialsIndexPage() {
       try {
         const officials = await getOfficials()
         setList(officials)
+        
+        if (officials.length === 0) {
+          toast({
+            title: "No Officials Found",
+            description: "No officials were returned from the API.",
+            variant: "default"
+          })
+        }
       } catch (error) {
         console.error('Failed to load officials:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         toast({
           title: "Error",
-          description: "Failed to load officials. Please try again.",
+          description: `Failed to load officials: ${errorMessage}`,
           variant: "destructive"
         })
       } finally {

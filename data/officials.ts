@@ -73,11 +73,42 @@ import { officialsApi, transformApiOfficial, transformForApi } from '@/lib/offic
 export async function getOfficials() {
   try {
     const result = await officialsApi.list()
+    
     if (result.success && result.data) {
-      // The API returns the officials array directly
-      const officials = Array.isArray(result.data) ? result.data : []
-      return officials.map(transformApiOfficial)
+      // Handle different response structures
+      let officials: any[] = []
+      
+      // Check if data is directly an array
+      if (Array.isArray(result.data)) {
+        officials = result.data
+      } 
+      // Check if data has an 'officials' property
+      else if (result.data && typeof result.data === 'object' && 'officials' in result.data && Array.isArray(result.data.officials)) {
+        officials = result.data.officials
+      }
+      // Check if data has a 'data' property
+      else if (result.data && typeof result.data === 'object' && 'data' in result.data && Array.isArray(result.data.data)) {
+        officials = result.data.data
+      }
+      // Check if data is a single object (shouldn't happen for list, but handle it)
+      else if (result.data && typeof result.data === 'object' && !Array.isArray(result.data)) {
+        officials = [result.data]
+      }
+      
+      // Transform officials, filtering out any that fail transformation
+      const transformed: Official[] = []
+      for (const official of officials) {
+        try {
+          const transformedOfficial = transformApiOfficial(official)
+          transformed.push(transformedOfficial)
+        } catch (error) {
+          // Continue processing other officials even if one fails
+        }
+      }
+      
+      return transformed
     }
+    
     throw new Error(result.error || 'Failed to fetch officials')
   } catch (error) {
     console.error('Failed to load officials from API:', error)
